@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+*.log
+.env
+.env.local
+.env.production
+uploads/*
+!uploads/.gitkeep
+public/uploads/*
+!public/uploads/.gitkeep
+.DS_Store
+Thumbs.db
+*.pem
+*.key

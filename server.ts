@@ -1,0 +1,52 @@
+import { createServer } from "node:http";
+import { parse } from "node:url";
+import next from "next";
+import { ingestAuthorization } from "./src/lib/auth";
+import { loadEnvFiles } from "./src/lib/load-env";
+
+loadEnvFiles();
+
+const dev = process.env.NODE_ENV !== "production";
+const hostname = "0.0.0.0";
+const port = Number(process.env.PORT || 3000);
+
+const app = next({ dev, hostname, port });
+const handle = app.getRequestHandler();
+
+function headerOf(value: string | string[] | undefined) {
+  if (!value) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+}
+
+app.prepare().then(() => {
+  createServer(async (req, res) => {
+    try {
+      const path = (req.url || "/").split("?")[0];
+      const isAdminPath = path.startsWith("/admin") || path.startsWith("/api/admin");
+      const cookie = headerOf(req.headers.cookie);
+      const authorization = isAdminPath ? undefined : headerOf(req.headers.authorization);
+      const ingested = isAdminPath
+        ? { user: null, setCookie: undefined as string | undefined }
+        : await ingestAuthorization({
+            headers: { cookie, authorization },
+          });
+      if (ingested.setCookie) {
+        const current = res.getHeader("Set-Cookie");
+        if (!current) res.setHeader("Set-Cookie", ingested.setCookie);
+        else if (Array.isArray(current)) res.setHeader("Set-Cookie", [...current, ingested.setCookie]);
+        else res.setHeader("Set-Cookie", [String(current), ingested.setCookie]);
+        const cookiePair = ingested.setCookie.split(";")[0];
+        req.headers.cookie = req.headers.cookie ? `${req.headers.cookie}; ${cookiePair}` : cookiePair;
+      }
+
+      const parsedUrl = parse(req.url || "/", true);
+      await handle(req, res, parsedUrl);
+    } catch (error) {
+      console.error(error);
+      res.statusCode = 500;
+      res.end("Internal server error");
+    }
+  }).listen(port, hostname, () => {
+    console.log(`Komplain app ready on http://${hostname}:${port}`);
+  });
+});
