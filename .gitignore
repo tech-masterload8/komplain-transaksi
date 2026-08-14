@@ -13,3 +13,4 @@ public/uploads/*
 Thumbs.db
 *.pem
 *.key
+tsconfig.tsbuildinfo
