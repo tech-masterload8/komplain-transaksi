@@ -45,8 +45,43 @@ export async function verifySession(token: string | undefined | null): Promise<S
   }
 }
 
-export function sessionCookie(token: string, cookieName = CUSTOMER_COOKIE) {
-  const secure = process.env.NODE_ENV === "production";
+export function requestIsHttps(request: Request) {
+  const forwarded = request.headers.get("x-forwarded-proto");
+  if (forwarded) return forwarded.split(",")[0].trim() === "https";
+  try {
+    return new URL(request.url).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function cookieOptions(secure: boolean) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: MAX_AGE,
+    secure,
+  };
+}
+
+export function applySessionCookie(
+  res: { cookies: { set: (name: string, value: string, options: ReturnType<typeof cookieOptions>) => unknown } },
+  token: string,
+  cookieName: string,
+  secure: boolean,
+) {
+  res.cookies.set(cookieName, token, cookieOptions(secure));
+}
+
+export function applyClearCookie(
+  res: { cookies: { set: (name: string, value: string, options: ReturnType<typeof cookieOptions>) => unknown } },
+  cookieName: string,
+) {
+  res.cookies.set(cookieName, "", { ...cookieOptions(false), maxAge: 0 });
+}
+
+export function sessionCookie(token: string, cookieName = CUSTOMER_COOKIE, secure = false) {
   return `${cookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${MAX_AGE}${secure ? "; Secure" : ""}`;
 }
 

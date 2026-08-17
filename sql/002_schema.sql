@@ -1,8 +1,6 @@
 -- App schema. Connect to database `komplain` before running.
 -- otomaxbank is never written to from this schema.
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 CREATE SEQUENCE IF NOT EXISTS ticket_seq START 1;
 
 CREATE TABLE IF NOT EXISTS staff_users (

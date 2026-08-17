@@ -17,26 +17,28 @@ async function main() {
   const password = env("APP_DB_PASSWORD", env("OTOMAX_DB_PASSWORD"));
   const dbName = env("APP_DB_NAME", "komplain");
 
-  const admin = new Client({
-    host,
-    port,
-    user,
-    password,
-    database: env("OTOMAX_DB_NAME", "otomaxbank"),
-  });
-  await admin.connect();
-
-  const exists = await admin.query("SELECT 1 FROM pg_database WHERE datname = $1", [dbName]);
-  if (!exists.rowCount) {
-    await admin.query(`CREATE DATABASE ${quoteIdent(dbName)} OWNER ${quoteIdent(user)}`);
-    console.log(`Created database ${dbName}`);
-  } else {
-    console.log(`Database ${dbName} already exists`);
-  }
-  await admin.end();
-
   const app = new Client({ host, port, user, password, database: dbName });
-  await app.connect();
+  try {
+    await app.connect();
+    console.log(`Database ${dbName} already exists`);
+  } catch {
+    const admin = new Client({
+      host,
+      port,
+      user,
+      password,
+      database: env("OTOMAX_DB_NAME", "otomaxbank"),
+    });
+    await admin.connect();
+    const exists = await admin.query("SELECT 1 FROM pg_database WHERE datname = $1", [dbName]);
+    if (!exists.rowCount) {
+      await admin.query(`CREATE DATABASE ${quoteIdent(dbName)} OWNER ${quoteIdent(user)}`);
+      console.log(`Created database ${dbName}`);
+    }
+    await admin.end();
+    await app.connect();
+  }
+  await ensureGenRandomUuid(app);
   const schema = fs.readFileSync(path.join(process.cwd(), "sql", "002_schema.sql"), "utf8");
   await app.query(schema);
   const upgrade = fs.readFileSync(path.join(process.cwd(), "sql", "003_tickets.sql"), "utf8");
@@ -58,6 +60,26 @@ async function main() {
   }
 
   await app.end();
+}
+
+async function ensureGenRandomUuid(client: Client) {
+  const check = await client.query<{ ok: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM pg_proc p
+       JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE p.proname = 'gen_random_uuid'
+         AND n.nspname IN ('pg_catalog', 'public')
+     ) AS ok`,
+  );
+  if (check.rows[0]?.ok) return;
+  await client.query(`
+    CREATE OR REPLACE FUNCTION public.gen_random_uuid()
+    RETURNS uuid
+    LANGUAGE sql
+    AS $$ SELECT md5(random()::text || clock_timestamp()::text)::uuid $$
+  `);
+  console.log("Added gen_random_uuid() fallback (pgcrypto not installed)");
 }
 
 function quoteIdent(value: string) {

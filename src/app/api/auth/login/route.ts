@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findReseller } from "@/lib/otomax";
-import { CUSTOMER_COOKIE, sessionCookie, signSession } from "@/lib/session";
+import { applySessionCookie, CUSTOMER_COOKIE, requestIsHttps, signSession } from "@/lib/session";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as { phone?: string; pin?: string };
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
         name: "Agen Uji",
       });
       const res = NextResponse.json({ ok: true, role: "agent", dev: true });
-      res.headers.set("Set-Cookie", sessionCookie(token, CUSTOMER_COOKIE));
+      applySessionCookie(res, token, CUSTOMER_COOKIE, requestIsHttps(request));
       return res;
     }
     return NextResponse.json({ error: "Nomor atau PIN tidak sesuai" }, { status: 401 });
@@ -33,6 +33,6 @@ export async function POST(request: Request) {
     name: reseller.nama || reseller.kode,
   });
   const res = NextResponse.json({ ok: true, role: "agent" });
-  res.headers.set("Set-Cookie", sessionCookie(token, CUSTOMER_COOKIE));
+  applySessionCookie(res, token, CUSTOMER_COOKIE, requestIsHttps(request));
   return res;
 }

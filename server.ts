@@ -18,18 +18,41 @@ function headerOf(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function isSensitivePath(pathname: string) {
+  const p = pathname.split("?")[0].toLowerCase();
+  return (
+    p === "/.env" ||
+    p.startsWith("/.env.") ||
+    p.endsWith("/.env") ||
+    p.includes("/.env.") ||
+    p === "/.git" ||
+    p.startsWith("/.git/")
+  );
+}
+
 app.prepare().then(() => {
   createServer(async (req, res) => {
     try {
       const path = (req.url || "/").split("?")[0];
+      if (isSensitivePath(path)) {
+        res.statusCode = 404;
+        res.end();
+        return;
+      }
       const isAdminPath = path.startsWith("/admin") || path.startsWith("/api/admin");
       const cookie = headerOf(req.headers.cookie);
       const authorization = isAdminPath ? undefined : headerOf(req.headers.authorization);
-      const ingested = isAdminPath
-        ? { user: null, setCookie: undefined as string | undefined }
-        : await ingestAuthorization({
-            headers: { cookie, authorization },
+      const proto = headerOf(req.headers["x-forwarded-proto"]);
+      let ingested: Awaited<ReturnType<typeof ingestAuthorization>> = { user: null };
+      if (!isAdminPath) {
+        try {
+          ingested = await ingestAuthorization({
+            headers: { cookie, authorization, "x-forwarded-proto": proto },
           });
+        } catch (error) {
+          console.error(error);
+        }
+      }
       if (ingested.setCookie) {
         const current = res.getHeader("Set-Cookie");
         if (!current) res.setHeader("Set-Cookie", ingested.setCookie);

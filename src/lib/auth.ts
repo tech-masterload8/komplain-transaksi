@@ -18,7 +18,7 @@ export async function getUserFromRequest(req: { headers: { cookie?: string; auth
 }
 
 export async function ingestAuthorization(req: {
-  headers: { cookie?: string; authorization?: string };
+  headers: { cookie?: string; authorization?: string; "x-forwarded-proto"?: string };
 }): Promise<{ user: SessionUser | null; setCookie?: string }> {
   const existing = await verifySession(readSessionCookie(req.headers.cookie));
   if (existing) return { user: existing };
@@ -79,5 +79,6 @@ export async function ingestAuthorization(req: {
     token: token || undefined,
   };
   const jwt = await signSession(user);
-  return { user, setCookie: sessionCookie(jwt) };
+  const proto = (req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+  return { user, setCookie: sessionCookie(jwt, CUSTOMER_COOKIE, proto === "https") };
 }

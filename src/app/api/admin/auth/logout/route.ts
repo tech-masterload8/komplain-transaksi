@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { ADMIN_COOKIE, clearSessionCookie } from "@/lib/session";
+import { ADMIN_COOKIE, applyClearCookie } from "@/lib/session";
 
 export async function POST() {
   const res = NextResponse.json({ ok: true });
-  res.headers.set("Set-Cookie", clearSessionCookie(ADMIN_COOKIE));
+  applyClearCookie(res, ADMIN_COOKIE);
   return res;
 }
