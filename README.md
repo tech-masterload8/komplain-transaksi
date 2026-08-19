@@ -73,6 +73,21 @@ Setelah container jalan, **jangan** ganti reverse proxy `/` milik halaman monito
 
 `docker-compose.yml` memakai `network_mode: host` supaya `127.0.0.1` di `.env` tetap mengenai PgSQL aaPanel.
 
+### Error `password authentication failed` (28P01)
+
+User OtoMax (`bankdb`) dan user aplikasi (`komplain`) **berbeda**. Migrasi tidak boleh memakai password `komplain` untuk masuk ke `otomaxbank`.
+
+1. **Stop** project (jangan biarkan restart-loop).
+2. Pastikan di aaPanel PostgreSQL sudah ada user `komplain` dan database `komplain`.
+3. Isi env Compose, lalu **Recreate** (bukan hanya Save/Restart):
+   - `OTOMAX_DB_USER=bankdb` + password bankdb
+   - `APP_DB_USER=komplain` + password komplain
+   - `NEXT_PUBLIC_BASE_PATH=/komplain`
+   - `APP_URL=https://103.179.67.71/komplain`
+4. Bungkus `WEB_DEV_PRIVATE_KEY` dengan tanda kutip tunggal.
+
+Pull/rebuild image setelah perbaikan migrasi di `main`.
+
 Cek pemetaan kolom OtoMax:
 
 ```bash
