@@ -61,7 +61,8 @@ need APP_DB_PASSWORD
 need WEB_DEV_PRIVATE_KEY
 need SESSION_SECRET
 
-compose up -d --build
+compose pull
+compose up -d
 compose ps
 echo
 echo "Aplikasi jalan di port 3001 (network host), path /komplain."

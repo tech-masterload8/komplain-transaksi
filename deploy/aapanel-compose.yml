@@ -1,11 +1,14 @@
+# Image dibangun di GitHub Actions, bukan di server.
+# Setelah push ke main, tunggu workflow GHCR selesai, lalu di aaPanel: Pull + Recreate.
+# Image: ghcr.io/tech-masterload8/komplain-transaksi:latest
+#
+# Kali pertama: GitHub → Packages → komplain-transaksi → Package settings → Public
+# (repo sudah public; package GHCR default-nya private).
+
 services:
   komplain:
-    build:
-      context: https://github.com/tech-masterload8/komplain-transaksi.git#main
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_BASE_PATH: /komplain
-    image: komplain-transaksi:latest
+    image: ghcr.io/tech-masterload8/komplain-transaksi:latest
+    pull_policy: always
     container_name: komplain-transaksi
     restart: unless-stopped
     extra_hosts:

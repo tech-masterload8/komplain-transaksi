@@ -4,11 +4,8 @@
 
 services:
   komplain:
-    build:
-      context: .
-      args:
-        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/komplain}
-    image: komplain-transaksi:latest
+    image: ghcr.io/tech-masterload8/komplain-transaksi:latest
+    pull_policy: always
     container_name: komplain-transaksi
     restart: unless-stopped
     ports:

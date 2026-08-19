@@ -52,6 +52,12 @@ Kosongkan `NEXT_PUBLIC_BASE_PATH` di `.env` lokal agar aplikasi tetap di root. L
 
 ## Docker di aaPanel
 
+Image produksi dibangun di GitHub Actions dan diunggah ke GHCR:
+
+`ghcr.io/tech-masterload8/komplain-transaksi:latest`
+
+Jangan build di server. Setelah push ke `main`, buka **Actions** sampai workflow **Publish GHCR image** hijau, lalu di aaPanel Compose: **Pull** + **Recreate** (bukan Restart). Kali pertama, buka GitHub → Packages → `komplain-transaksi` → Package settings → **Public**.
+
 Di terminal aaPanel (root):
 
 ```bash
@@ -77,7 +83,7 @@ Setelah container jalan, **jangan** ganti reverse proxy `/` milik halaman monito
 
 Migrasi **hanya** ke database `komplain` (membuat tabel tiket/staf). `otomaxbank` tidak diubah.
 
-Kalau log masih `user "komplain", database "otomaxbank"`, image lama yang jalan — **Rebuild** dari `main`.
+Kalau log masih `user "komplain", database "otomaxbank"`, image lama yang jalan — **Pull** image GHCR terbaru, lalu Recreate.
 
 Container Docker tampil sebagai IP `172.20.0.x`. Tambah di `pg_hba.conf` PostgreSQL, lalu reload:
 

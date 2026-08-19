@@ -1,14 +1,11 @@
-# Default untuk aaPanel: jaringan host agar 127.0.0.1 di .env
+# Default untuk aaPanel: tarik image GHCR, jaringan host agar 127.0.0.1 di .env
 # tetap mengenai PostgreSQL yang sudah jalan di server.
 # Port aplikasi = PORT di .env (default 3001; 3000 sudah terpakai monitoring). Nginx aaPanel proxy ke port itu.
 
 services:
   komplain:
-    build:
-      context: .
-      args:
-        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/komplain}
-    image: komplain-transaksi:latest
+    image: ghcr.io/tech-masterload8/komplain-transaksi:latest
+    pull_policy: always
     container_name: komplain-transaksi
     restart: unless-stopped
     network_mode: host
