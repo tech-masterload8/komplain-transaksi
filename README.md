@@ -9,12 +9,32 @@ Semua teks antarmuka memakai **Bahasa Indonesia**.
 
 ## Sumber data
 
-- **`otomaxbank` (hanya baca)** — tabel `reseller` dan `transaksi`. Aplikasi tidak pernah menulis ke sini.
-- **`komplain` (database baru)** — tiket, pesan, akun CS, token kunjungan, dan shortcut pesan.
+- **`otomaxbank` (hanya baca)** — tabel `reseller`, `transaksi`, dan bila ada `pengirim`. Aplikasi tidak pernah menulis ke sini.
+- **`komplain` (database baru)** — tiket, pesan, akun staf, token kunjungan, dan shortcut pesan.
 
-Hanya aplikasi pelanggan yang membaca header terenkripsi dari aplikasi Android. Panel admin memakai login staf (nomor + PIN).
+Header terenkripsi dari aplikasi Android hanya dipakai di sisi pelanggan. Panel admin memakai username + password.
 
-PM2 dipakai, bukan Docker, karena aaPanel sudah menyediakan Node.js + PM2 + Nginx.
+Deploy produksi memakai **Docker** agar versi Node dan dependensi tidak bentrok dengan aaPanel.
+
+## Autentikasi
+
+- Di dalam aplikasi Android (menu website mode khusus), permintaan pertama membawa header `Authorization` terenkripsi. Server mendekripsinya, mengambil **kode reseller**, membaca `nama` dari tabel `reseller`, lalu menyimpan cookie sesi. Reseller **tidak perlu login** nomor HP/PIN.
+- Layar pelanggan menampilkan `kode` dan `nama` di bagian atas, lalu daftar `transaksi` milik kode itu, diurutkan `tgl_entri` menurun. Pilih transaksi untuk membuat tiket komplain.
+- Header Android tidak dipakai di `/admin`.
+- Staf masuk di `/admin/login` dengan username dan password.
+
+### Peran admin
+
+| Peran | Tiket | Shortcut | Hapus data | Kelola pengguna |
+| --- | --- | --- | --- | --- |
+| CS | proses | ubah | tidak | tidak |
+| Admin | proses | ubah | tidak | tidak |
+| Super Admin | proses | ubah | ya | ya |
+
+Akun super admin default (dibuat saat migrasi):
+
+- username: `steinway`
+- password: `Luminous1ty`
 
 ## Menjalankan lokal
 
@@ -26,29 +46,43 @@ npm run dev
 ```
 
 - Pelanggan: `http://localhost:3000`
-- Admin CS: `http://localhost:3000/admin/login`
+- Admin: `http://localhost:3000/admin/login`
 
-Buat akun CS lewat `CS_PHONE`, `CS_PIN`, dan `CS_NAME` di `.env` lalu jalankan `npm run migrate`.
+## Docker di aaPanel
 
-## Produksi di aaPanel
+1. Di PgSQL aaPanel, pastikan database `otomaxbank` (read-only) dan `komplain` bisa diakses. `komplain` akan dibuat otomatis oleh migrasi jika belum ada.
+2. Clone repo, salin `.env.example` menjadi `.env`, isi password PostgreSQL, `SESSION_SECRET`, dan `WEB_DEV_PRIVATE_KEY`.
+3. Di aaPanel Docker, buat compose dari `docker-compose.yml` (mode `network_mode: host` agar `127.0.0.1` di `.env` tetap mengenai PostgreSQL host).
+4. Build & start. Container menjalankan migrasi, membaca struktur tabel OtoMax, lalu listen di `PORT` (default 3000).
+5. Arahkan Nginx ke port itu dan teruskan header `Authorization` (lihat `deploy/nginx.conf.example`).
 
-1. Di PgSQL, buat database `komplain` (`sql/001_create_database.sql`), lalu jalankan `sql/002_schema.sql` (dan `sql/003_tickets.sql` jika database sudah ada).
-2. Clone repo ke `/www/wwwroot/komplain`.
-3. Isi `.env` dari `.env.example`.
-4. Node 20+:
+Perintah setara di terminal:
 
 ```bash
-npm install
-npm run build
-npm run migrate
-pm2 start ecosystem.config.cjs
-pm2 save
+docker compose up -d --build
 ```
 
-5. Arahkan Nginx ke port `3000` dan teruskan header `Authorization` (lihat `deploy/nginx.conf.example`) agar WebView Android bisa mengenali reseller saat pertama kali membuka menu.
+Jika `network_mode: host` tidak tersedia (Docker Desktop), pakai `docker-compose.bridge.yml` dan ubah `OTOMAX_DB_HOST` / `APP_DB_HOST` menjadi `host.docker.internal`. Izinkan PostgreSQL menerima koneksi dari subnet Docker.
 
-## Autentikasi
+Cek pemetaan kolom OtoMax:
 
-- Di dalam aplikasi Android (menu website mode khusus), permintaan pertama membawa header `Authorization` terenkripsi. Server Node mendekripsinya, memetakan ke `reseller.kode`, lalu menyimpan cookie sesi. Header ini hanya terbaca pada pembukaan pertama, dan **tidak dipakai di `/admin`**.
-- Login browser pelanggan memakai nomor HP + PIN tabel `reseller`.
-- CS masuk di `/admin/login` memakai tabel `staff_users` di database `komplain`.
+```bash
+npm run inspect:otomax
+```
+
+Di panel, super admin juga melihat ringkasan mapping di dasbor.
+
+## Kolom OtoMax yang dipakai
+
+Aplikasi hanya **membaca** tabel yang diperlukan untuk komplain:
+
+| Tabel | Kegunaan |
+| --- | --- |
+| `reseller` | Identitas dari header: `kode`, `nama`, `nomor_hp` |
+| `transaksi` | Daftar/detail trx: `kode`, `tgl_entri`, `kode_produk`, `tujuan`, `kode_reseller`, `harga`, `status`, `tgl_status`, `sn`, `keterangan` |
+| `produk` | Nama tampilan: `kode`, `nama` |
+| `pengirim` | Cadangan peta nomor → `kode_reseller` |
+
+Filter pelanggan: `transaksi.kode_reseller` = kode dari header Android. Urutan: `tgl_entri DESC`. `transaksi.pengirim` adalah pengirim pesan, bukan kode agen.
+
+Tabel sinkron lain (`mutasi`, `operator`, `level`, dll.) tidak dipakai aplikasi ini.

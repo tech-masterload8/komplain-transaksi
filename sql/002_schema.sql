@@ -5,10 +5,10 @@ CREATE SEQUENCE IF NOT EXISTS ticket_seq START 1;
 
 CREATE TABLE IF NOT EXISTS staff_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  phone TEXT UNIQUE NOT NULL,
-  pin_hash TEXT NOT NULL,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
   name TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'cs' CHECK (role IN ('cs', 'admin')),
+  role TEXT NOT NULL DEFAULT 'cs' CHECK (role IN ('cs', 'admin', 'superadmin')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

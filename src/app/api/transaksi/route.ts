@@ -11,6 +11,9 @@ export async function GET(request: Request) {
   const offset = Number(searchParams.get("offset") || 0);
   const limit = Math.min(Number(searchParams.get("limit") || 30), 100);
   const resellerKode = user.role === "agent" ? user.kode : searchParams.get("reseller") || undefined;
+  if (user.role === "agent" && !resellerKode) {
+    return NextResponse.json({ error: "Kode reseller tidak terbaca" }, { status: 401 });
+  }
 
   const items = await listTransactions({ resellerKode, search, limit, offset });
   return NextResponse.json({ items });

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { appdb } from "@/lib/db";
-import { requireStaff } from "@/lib/api-auth";
+import { requireRecordDeleter, requireStaff } from "@/lib/api-auth";
 
 export async function GET() {
   const { user, error } = await requireStaff();
@@ -39,4 +39,13 @@ export async function PATCH(request: Request) {
     [body.id, body.active ?? null, body.label || null],
   );
   return NextResponse.json({ item: rows[0] });
+}
+
+export async function DELETE(request: Request) {
+  const { user, error } = await requireRecordDeleter();
+  if (error || !user) return error!;
+  const body = (await request.json()) as { id?: number };
+  if (!body.id) return NextResponse.json({ error: "ID wajib diisi" }, { status: 400 });
+  await appdb.query("DELETE FROM message_shortcuts WHERE id = $1", [body.id]);
+  return NextResponse.json({ ok: true });
 }

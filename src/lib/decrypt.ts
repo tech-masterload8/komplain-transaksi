@@ -4,12 +4,15 @@ export type AgentHeaderPayload = {
   token?: string;
   date?: string;
   kode?: string;
+  kode_reseller?: string;
+  kodereseller?: string;
   kodeagen?: string;
   id_agen?: string;
   agen?: string;
   reseller?: string;
   nohp?: string;
   hp?: string;
+  nomor_hp?: string;
   nama?: string;
   name?: string;
   [key: string]: unknown;
@@ -91,6 +94,8 @@ function toPrivateKey(raw: Buffer) {
 
 export function agentCodeFromPayload(payload: AgentHeaderPayload) {
   const value =
+    payload.kode_reseller ||
+    payload.kodereseller ||
     payload.kode ||
     payload.kodeagen ||
     payload.id_agen ||
@@ -101,7 +106,7 @@ export function agentCodeFromPayload(payload: AgentHeaderPayload) {
 }
 
 export function phoneFromPayload(payload: AgentHeaderPayload) {
-  return String(payload.nohp || payload.hp || "").trim();
+  return String(payload.nomor_hp || payload.nohp || payload.hp || "").trim();
 }
 
 export function nameFromPayload(payload: AgentHeaderPayload) {

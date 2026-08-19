@@ -44,7 +44,7 @@ export function truncate(text: string, length = 22) {
 }
 
 export function isSuccessStatus(status: string | number | null | undefined) {
-  if (status == null) return true;
+  if (status == null) return false;
   const value = String(status).toLowerCase();
   return value === "1" || value === "sukses" || value === "success" || value === "true";
 }

@@ -1,17 +1,23 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { canDeleteRecords } from "@/lib/roles";
 
 type Shortcut = { id: number; label: string; active: boolean; sort_order: number };
 
 export default function AdminShortcutPage() {
   const [items, setItems] = useState<Shortcut[]>([]);
   const [label, setLabel] = useState("");
+  const [canDelete, setCanDelete] = useState(false);
 
   async function load() {
-    const res = await fetch("/api/admin/shortcuts");
+    const [res, me] = await Promise.all([
+      fetch("/api/admin/shortcuts"),
+      fetch("/api/admin/auth/me").then((r) => r.json()),
+    ]);
     const data = await res.json();
     setItems(data.items || []);
+    setCanDelete(canDeleteRecords(me.user?.role));
   }
 
   useEffect(() => {
@@ -39,6 +45,16 @@ export default function AdminShortcutPage() {
     await load();
   }
 
+  async function remove(item: Shortcut) {
+    if (!confirm("Hapus shortcut ini?")) return;
+    await fetch("/api/admin/shortcuts", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: item.id }),
+    });
+    await load();
+  }
+
   return (
     <div>
       <h1 className="text-3xl font-extrabold">Shortcut Pesan</h1>
@@ -58,11 +74,18 @@ export default function AdminShortcutPage() {
 
       <div className="mt-5 space-y-2">
         {items.map((item) => (
-          <div key={item.id} className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 shadow-sm">
+          <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm">
             <p className={item.active ? "font-medium" : "text-slate-400 line-through"}>{item.label}</p>
-            <button type="button" onClick={() => toggle(item)} className="text-sm font-semibold text-sky-700">
-              {item.active ? "Nonaktifkan" : "Aktifkan"}
-            </button>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => toggle(item)} className="text-sm font-semibold text-sky-700">
+                {item.active ? "Nonaktifkan" : "Aktifkan"}
+              </button>
+              {canDelete ? (
+                <button type="button" onClick={() => remove(item)} className="text-sm font-semibold text-red-600">
+                  Hapus
+                </button>
+              ) : null}
+            </div>
           </div>
         ))}
       </div>

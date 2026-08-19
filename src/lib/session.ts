@@ -1,10 +1,12 @@
 import { SignJWT, jwtVerify } from "jose";
+import type { SessionRole } from "./roles";
 
 export type SessionUser = {
-  role: "agent" | "cs" | "admin";
+  role: SessionRole;
   kode: string;
   phone: string;
   name: string;
+  username?: string;
   token?: string;
 };
 
@@ -38,6 +40,7 @@ export async function verifySession(token: string | undefined | null): Promise<S
       kode: String(payload.kode),
       phone: String(payload.phone || ""),
       name: String(payload.name || ""),
+      username: payload.username ? String(payload.username) : undefined,
       token: payload.token ? String(payload.token) : undefined,
     };
   } catch {

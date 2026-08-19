@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { appdb } from "@/lib/db";
 import { requireUser } from "@/lib/api-auth";
-import { getTransaction } from "@/lib/otomax";
+import { getTransaction, sameResellerCode } from "@/lib/otomax";
 
 export async function GET(request: Request) {
   const { user, error } = await requireUser();
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
   if (user.role === "agent") {
     params.push(user.kode);
-    where.push(`reseller_kode = $${params.length}`);
+    where.push(`lower(btrim(reseller_kode)) = lower(btrim($${params.length}))`);
   }
   if (status === "selesai") {
     where.push(`status = 'selesai'`);
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
   const trx = await getTransaction(transactionId);
   if (!trx) return NextResponse.json({ error: "Transaksi tidak ditemukan" }, { status: 404 });
-  if (user.role === "agent" && trx.kodeReseller && trx.kodeReseller !== user.kode) {
+  if (user.role === "agent" && trx.kodeReseller && !sameResellerCode(trx.kodeReseller, user.kode)) {
     return NextResponse.json({ error: "Tidak ada akses" }, { status: 403 });
   }
 

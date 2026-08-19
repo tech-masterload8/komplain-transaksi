@@ -5,6 +5,7 @@ import { ADMIN_COOKIE, CUSTOMER_COOKIE } from "@/lib/session";
 function isPublic(pathname: string) {
   return (
     pathname === "/" ||
+    pathname === "/api/health" ||
     pathname === "/api/auth/login" ||
     pathname === "/admin/login" ||
     pathname === "/api/admin/auth/login" ||

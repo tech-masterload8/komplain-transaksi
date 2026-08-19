@@ -7,7 +7,7 @@ import {
   phoneFromPayload,
 } from "./decrypt";
 import { findReseller } from "./otomax";
-import { readSessionCookie, sessionCookie, signSession, verifySession, type SessionUser } from "./session";
+import { CUSTOMER_COOKIE, readSessionCookie, sessionCookie, signSession, verifySession, type SessionUser } from "./session";
 
 const TOKEN_TTL_MS = 5 * 60 * 1000;
 
@@ -21,7 +21,26 @@ export async function ingestAuthorization(req: {
   headers: { cookie?: string; authorization?: string; "x-forwarded-proto"?: string };
 }): Promise<{ user: SessionUser | null; setCookie?: string }> {
   const existing = await verifySession(readSessionCookie(req.headers.cookie));
-  if (existing) return { user: existing };
+  if (existing) {
+    if (existing.role === "agent" && existing.kode && (!existing.name || existing.name === existing.kode)) {
+      try {
+        const reseller = await findReseller({ kode: existing.kode });
+        if (reseller?.nama && reseller.nama !== existing.name) {
+          const user: SessionUser = {
+            ...existing,
+            name: reseller.nama,
+            phone: existing.phone || reseller.phone,
+          };
+          const jwt = await signSession(user);
+          const proto = (req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+          return { user, setCookie: sessionCookie(jwt, CUSTOMER_COOKIE, proto === "https") };
+        }
+      } catch {
+        /* keep the existing session */
+      }
+    }
+    return { user: existing };
+  }
 
   const parsed = parseAuthorizationHeader(req.headers.authorization);
   const privateKey = process.env.WEB_DEV_PRIVATE_KEY || "";

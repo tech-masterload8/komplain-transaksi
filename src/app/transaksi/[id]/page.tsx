@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Calendar, CreditCard, Hash, MessageCircle, Phone, Search, Send } from "lucide-react";
 import PhoneShell from "@/components/PhoneShell";
 import { CircleIconButton } from "@/components/CircleIconButton";
+import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { formatDateTime, formatNominal } from "@/lib/format";
 
 type Trx = {
@@ -15,6 +16,9 @@ type Trx = {
   nominal: number | null;
   keterangan: string;
   serialNumber: string;
+  kodeProduk?: string;
+  namaProduk?: string;
+  pengirim?: string;
 };
 
 export default function TransaksiDetailPage() {
@@ -63,6 +67,7 @@ export default function TransaksiDetailPage() {
         { icon: <Calendar size={16} />, label: "Tanggal Status", value: formatDateTime(item.tanggalStatus) },
         { icon: <Phone size={16} />, label: "Nomor Tujuan", value: item.tujuan || "-" },
         { icon: <CreditCard size={16} />, label: "Nominal", value: formatNominal(item.nominal) },
+        { icon: <Hash size={16} />, label: "Produk", value: item.namaProduk || item.kodeProduk || "-" },
         { icon: <Hash size={16} />, label: "Keterangan", value: item.keterangan || "-" },
         { icon: <Hash size={16} />, label: "Serial Number", value: item.serialNumber || "-" },
       ]
@@ -71,17 +76,19 @@ export default function TransaksiDetailPage() {
   return (
     <PhoneShell>
       <div className="flex min-h-dvh flex-col px-5 pb-4 pt-6">
-        <header className="mb-5 flex items-center justify-between">
-          <h1 className="text-[34px] font-extrabold tracking-tight">Detail</h1>
-          <div className="flex gap-2">
-            <CircleIconButton href="/transaksi">
-              <Search size={18} />
-            </CircleIconButton>
-            <CircleIconButton href="/chat">
-              <MessageCircle size={18} />
-            </CircleIconButton>
-          </div>
-        </header>
+        <CustomerHeader
+          title="Detail"
+          extra={
+            <>
+              <CircleIconButton href="/transaksi">
+                <Search size={18} />
+              </CircleIconButton>
+              <CircleIconButton href="/chat">
+                <MessageCircle size={18} />
+              </CircleIconButton>
+            </>
+          }
+        />
 
         <div className="rounded-[24px] border border-zinc-100 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
           {rows.map((row) => (

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, ChevronDown, MessageCircle, Search } from "lucide-react";
 import PhoneShell from "@/components/PhoneShell";
 import { CircleIconButton } from "@/components/CircleIconButton";
+import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { formatDateTime, truncate, isSuccessStatus } from "@/lib/format";
 
 type Trx = {
@@ -12,6 +13,7 @@ type Trx = {
   tanggalEntri: string | null;
   tujuan: string;
   kodeProduk: string;
+  namaProduk?: string;
   status: string | number | null;
 };
 
@@ -27,13 +29,13 @@ export default function TransaksiList() {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     params.set("offset", reset ? "0" : String(items.length));
-    const res = await fetch(`/api/transaksi?${params.toString()}`);
+    const res = await fetch(`/api/transaksi?${params.toString()}`, { credentials: "include" });
     if (res.status === 401) {
       router.replace("/");
       return;
     }
     const data = await res.json();
-    setItems(reset ? data.items : [...items, ...data.items]);
+    setItems(reset ? data.items || [] : [...items, ...(data.items || [])]);
     setLoading(false);
   }
 
@@ -45,17 +47,19 @@ export default function TransaksiList() {
   return (
     <PhoneShell>
       <div className="flex min-h-dvh flex-col px-5 pb-8 pt-6">
-        <header className="mb-5 flex items-center justify-between">
-          <h1 className="text-[34px] font-extrabold tracking-tight">Transaksi</h1>
-          <div className="flex gap-2">
-            <CircleIconButton onClick={() => setSearchOpen((v) => !v)}>
-              <Search size={18} />
-            </CircleIconButton>
-            <CircleIconButton href="/chat">
-              <MessageCircle size={18} />
-            </CircleIconButton>
-          </div>
-        </header>
+        <CustomerHeader
+          title="Transaksi"
+          extra={
+            <>
+              <CircleIconButton onClick={() => setSearchOpen((v) => !v)}>
+                <Search size={18} />
+              </CircleIconButton>
+              <CircleIconButton href="/chat">
+                <MessageCircle size={18} />
+              </CircleIconButton>
+            </>
+          }
+        />
 
         {searchOpen ? (
           <form
@@ -95,12 +99,14 @@ export default function TransaksiList() {
               </div>
               <div className="min-w-0 text-right">
                 <p className="truncate font-semibold">{item.tujuan}</p>
-                <p className="truncate text-sm text-zinc-400">{truncate(item.kodeProduk || "-", 16)}</p>
+                <p className="truncate text-sm text-zinc-400">
+                  {truncate(item.namaProduk || item.kodeProduk || "-", 16)}
+                </p>
               </div>
             </button>
           ))}
           {!loading && items.length === 0 ? (
-            <p className="py-16 text-center text-sm text-zinc-400">Belum ada transaksi.</p>
+            <p className="py-16 text-center text-sm text-zinc-400">Belum ada transaksi untuk akun ini.</p>
           ) : null}
         </div>
 

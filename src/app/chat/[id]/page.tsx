@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Paperclip, Send } from "lucide-react";
 import PhoneShell from "@/components/PhoneShell";
+import { CircleIconButton } from "@/components/CircleIconButton";
+import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { formatTime } from "@/lib/format";
 
 type Message = {
@@ -68,18 +70,17 @@ export default function ChatThreadPage() {
   return (
     <PhoneShell>
       <div className="flex min-h-dvh flex-col">
-        <header className="flex items-center gap-3 px-4 py-4">
-          <button type="button" onClick={() => router.push("/chat")} className="text-zinc-500">
-            <ArrowLeft size={20} />
-          </button>
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-red-500 font-bold text-white">
-            {(conversation?.reseller_phone || "R").slice(-2)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{conversation?.reseller_phone || "Reseller"}</p>
-            <p className="text-sm text-sky-600">#{conversation?.transaction_id}</p>
-          </div>
-        </header>
+        <div className="px-5 pt-6">
+          <CustomerHeader
+            title="Percakapan"
+            extra={
+              <CircleIconButton href="/chat" dark={false}>
+                <ArrowLeft size={18} />
+              </CircleIconButton>
+            }
+          />
+          <p className="mb-4 text-sm text-sky-600">#{conversation?.transaction_id}</p>
+        </div>
 
         <div className="flex-1 space-y-3 overflow-y-auto px-4 pb-3">
           {messages.map((message) => {

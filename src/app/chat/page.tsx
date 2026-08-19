@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Search } from "lucide-react";
 import PhoneShell from "@/components/PhoneShell";
 import { CircleIconButton } from "@/components/CircleIconButton";
+import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { formatTime, truncate } from "@/lib/format";
 
 type Conversation = {
@@ -43,12 +44,14 @@ export default function ChatListPage() {
   return (
     <PhoneShell>
       <div className="flex min-h-dvh flex-col px-5 pb-5 pt-6">
-        <header className="mb-4 flex items-center justify-between">
-          <h1 className="text-[34px] font-extrabold tracking-tight">Chat</h1>
-          <CircleIconButton href="/transaksi">
-            <ArrowLeft size={18} />
-          </CircleIconButton>
-        </header>
+        <CustomerHeader
+          title="Chat"
+          extra={
+            <CircleIconButton href="/transaksi">
+              <ArrowLeft size={18} />
+            </CircleIconButton>
+          }
+        />
 
         <div className="mb-3 flex items-center gap-2">
           <button

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Jalankan di terminal aaPanel sebagai root.
+# Deploy Docker di aaPanel. Postgres host (otomaxbank + komplain) tidak diubah.
 # Repo: https://github.com/tech-masterload8/komplain-transaksi
 
 set -euo pipefail
@@ -21,9 +21,5 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-npm install
-npm run build
-npm run migrate
-pm2 start ecosystem.config.cjs
-pm2 save
-pm2 status
+docker compose up -d --build
+docker compose ps

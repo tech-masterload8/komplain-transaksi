@@ -2,9 +2,10 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Paperclip, Send } from "lucide-react";
 import { formatDateTime, formatNominal, formatTime, labelStatusTiket } from "@/lib/format";
+import { canDeleteRecords } from "@/lib/roles";
 
 type Ticket = {
   id: string;
@@ -36,23 +37,30 @@ type Trx = {
   keterangan: string;
   serialNumber: string;
   kodeProduk: string;
+  namaProduk?: string;
 };
 
 export default function AdminTicketDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [trx, setTrx] = useState<Trx | null>(null);
   const [text, setText] = useState("");
+  const [canDelete, setCanDelete] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function load() {
-    const res = await fetch(`/api/admin/tickets/${params.id}`);
+    const [res, me] = await Promise.all([
+      fetch(`/api/admin/tickets/${params.id}`),
+      fetch("/api/admin/auth/me").then((r) => r.json()),
+    ]);
     const data = await res.json();
     setTicket(data.ticket);
     setMessages(data.messages || []);
     setTrx(data.transaction);
+    setCanDelete(canDeleteRecords(me.user?.role));
   }
 
   useEffect(() => {
@@ -84,6 +92,17 @@ export default function AdminTicketDetailPage() {
       body: JSON.stringify(payload),
     });
     await load();
+  }
+
+  async function removeTicket() {
+    if (!confirm("Hapus tiket ini beserta seluruh percakapannya?")) return;
+    const res = await fetch(`/api/admin/tickets/${params.id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Gagal menghapus tiket");
+      return;
+    }
+    router.replace("/admin/tiket");
   }
 
   return (
@@ -120,6 +139,15 @@ export default function AdminTicketDetailPage() {
           >
             Buka kembali
           </button>
+          {canDelete ? (
+            <button
+              type="button"
+              onClick={removeTicket}
+              className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white"
+            >
+              Hapus tiket
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -193,6 +221,7 @@ export default function AdminTicketDetailPage() {
               <Row label="Nomor tujuan" value={trx?.tujuan || "-"} />
               <Row label="Nominal" value={formatNominal(trx?.nominal)} />
               <Row label="Kode produk" value={trx?.kodeProduk || ticket?.product_code || "-"} />
+              <Row label="Nama produk" value={trx?.namaProduk || "-"} />
               <Row label="Serial number" value={trx?.serialNumber || "-"} />
               <Row label="Keterangan" value={trx?.keterangan || "-"} />
             </dl>

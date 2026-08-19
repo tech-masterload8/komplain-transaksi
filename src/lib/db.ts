@@ -1,4 +1,7 @@
 import { Pool, type PoolConfig } from "pg";
+import { loadEnvFiles } from "./load-env";
+
+loadEnvFiles();
 
 function poolConfig(prefix: "OTOMAX" | "APP", extra?: PoolConfig): PoolConfig {
   const fallbackPrefix = prefix === "APP" ? "OTOMAX" : "APP";
@@ -29,3 +32,7 @@ export const otomax = new Pool(
 
 /** Complaint chats, staff, and sessions. */
 export const appdb = new Pool(poolConfig("APP"));
+
+export async function closeDb() {
+  await Promise.allSettled([otomax.end(), appdb.end()]);
+}

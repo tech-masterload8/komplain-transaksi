@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { appdb } from "@/lib/db";
-import { requireStaff } from "@/lib/api-auth";
+import { requireRecordDeleter, requireStaff } from "@/lib/api-auth";
 import { getTransaction } from "@/lib/otomax";
 import { labelStatusTiket } from "@/lib/format";
 
@@ -71,4 +71,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 
   return NextResponse.json({ ticket: updated.rows[0] });
+}
+
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+  const { user, error } = await requireRecordDeleter();
+  if (error || !user) return error!;
+  const { id } = await context.params;
+  const deleted = await appdb.query("DELETE FROM conversations WHERE id = $1 RETURNING id", [id]);
+  if (!deleted.rowCount) return NextResponse.json({ error: "Tiket tidak ditemukan" }, { status: 404 });
+  return NextResponse.json({ ok: true });
 }

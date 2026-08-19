@@ -39,27 +39,53 @@ async function main() {
     await app.connect();
   }
   await ensureGenRandomUuid(app);
-  const schema = fs.readFileSync(path.join(process.cwd(), "sql", "002_schema.sql"), "utf8");
-  await app.query(schema);
-  const upgrade = fs.readFileSync(path.join(process.cwd(), "sql", "003_tickets.sql"), "utf8");
-  await app.query(upgrade);
+  await runSqlFile(app, "002_schema.sql");
+  await runSqlFile(app, "003_tickets.sql");
+  await runSqlFile(app, "004_staff_username.sql");
   console.log("Skema database aplikasi diterapkan");
 
-  const phone = env("CS_PHONE");
-  const pin = env("CS_PIN");
-  const name = env("CS_NAME", "Customer Service");
-  if (phone && pin) {
-    const hash = await bcrypt.hash(pin, 10);
-    await app.query(
-      `INSERT INTO staff_users (phone, pin_hash, name, role)
-       VALUES ($1, $2, $3, 'admin')
-       ON CONFLICT (phone) DO UPDATE SET pin_hash = EXCLUDED.pin_hash, name = EXCLUDED.name`,
-      [phone, hash, name],
-    );
-    console.log(`Upserted CS user ${phone}`);
-  }
+  await seedSuperAdmin(app);
 
   await app.end();
+}
+
+async function runSqlFile(client: Client, filename: string) {
+  const schema = fs.readFileSync(path.join(process.cwd(), "sql", filename), "utf8");
+  await client.query(schema);
+}
+
+async function seedSuperAdmin(client: Client) {
+  const username = env("SUPERADMIN_USERNAME", "steinway").trim();
+  const password = env("SUPERADMIN_PASSWORD", "Luminous1ty");
+  const name = env("SUPERADMIN_NAME", "Steinway");
+  if (!username || !password) return;
+
+  const existing = await client.query("SELECT id FROM staff_users WHERE lower(username) = lower($1)", [username]);
+  if (existing.rowCount && env("SUPERADMIN_RESET_PASSWORD") !== "true") {
+    await client.query("UPDATE staff_users SET role = 'superadmin', name = COALESCE(NULLIF(name, ''), $2) WHERE id = $1", [
+      existing.rows[0].id,
+      name,
+    ]);
+    console.log(`Super admin ${username} sudah ada`);
+    return;
+  }
+
+  const hash = await bcrypt.hash(password, 10);
+  if (existing.rowCount) {
+    await client.query(
+      `UPDATE staff_users SET password_hash = $2, name = $3, role = 'superadmin' WHERE id = $1`,
+      [existing.rows[0].id, hash, name],
+    );
+    console.log(`Password super admin ${username} direset`);
+    return;
+  }
+
+  await client.query(
+    `INSERT INTO staff_users (username, password_hash, name, role)
+     VALUES ($1, $2, $3, 'superadmin')`,
+    [username, hash, name],
+  );
+  console.log(`Super admin ${username} dibuat`);
 }
 
 async function ensureGenRandomUuid(client: Client) {

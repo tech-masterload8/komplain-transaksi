@@ -1,0 +1,26 @@
+# Pakai file ini jika network_mode: host tidak tersedia
+# (Docker Desktop Windows/macOS). Ubah OTOMAX_DB_HOST dan APP_DB_HOST
+# di .env menjadi host.docker.internal.
+
+services:
+  komplain:
+    build: .
+    image: komplain-transaksi:latest
+    container_name: komplain-transaksi
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      OTOMAX_DB_HOST: ${OTOMAX_DB_HOST:-host.docker.internal}
+      APP_DB_HOST: ${APP_DB_HOST:-host.docker.internal}
+    volumes:
+      - komplain_uploads:/app/public/uploads
+
+volumes:
+  komplain_uploads:
