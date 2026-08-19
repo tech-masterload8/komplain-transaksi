@@ -50,19 +50,21 @@ npm run dev
 
 ## Docker di aaPanel
 
-1. Di PgSQL aaPanel, pastikan database `otomaxbank` (read-only) dan `komplain` bisa diakses. `komplain` akan dibuat otomatis oleh migrasi jika belum ada.
-2. Clone repo, salin `.env.example` menjadi `.env`, isi password PostgreSQL, `SESSION_SECRET`, dan `WEB_DEV_PRIVATE_KEY`.
-3. Di aaPanel Docker, buat compose dari `docker-compose.yml` (mode `network_mode: host` agar `127.0.0.1` di `.env` tetap mengenai PostgreSQL host).
-4. Build & start. Container menjalankan migrasi, membaca struktur tabel OtoMax, lalu listen di `PORT` (default 3000).
-5. Arahkan Nginx ke port itu dan teruskan header `Authorization` (lihat `deploy/nginx.conf.example`).
-
-Perintah setara di terminal:
+Di terminal aaPanel (root):
 
 ```bash
-docker compose up -d --build
+bash <(curl -fsSL https://raw.githubusercontent.com/tech-masterload8/komplain-transaksi/main/deploy/setup.sh)
 ```
 
-Jika `network_mode: host` tidak tersedia (Docker Desktop), pakai `docker-compose.bridge.yml` dan ubah `OTOMAX_DB_HOST` / `APP_DB_HOST` menjadi `host.docker.internal`. Izinkan PostgreSQL menerima koneksi dari subnet Docker.
+Skrip akan clone repo ke `/www/wwwroot/komplain`. Kali pertama ia membuat `.env` — isi password PostgreSQL (`OTOMAX_DB_PASSWORD`, `APP_DB_PASSWORD`) dan `WEB_DEV_PRIVATE_KEY`, lalu jalankan perintah yang sama lagi.
+
+Setelah container jalan:
+
+1. Website aaPanel → Reverse Proxy ke `http://127.0.0.1:3000`
+2. Tambahkan `proxy_set_header Authorization $http_authorization;` agar WebView Android mengenali reseller
+3. Admin: `https://domain-anda/admin/login` (username `steinway`)
+
+`docker-compose.yml` memakai `network_mode: host` supaya `127.0.0.1` di `.env` tetap mengenai PgSQL aaPanel.
 
 Cek pemetaan kolom OtoMax:
 
