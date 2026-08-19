@@ -73,6 +73,18 @@ Setelah container jalan, **jangan** ganti reverse proxy `/` milik halaman monito
 
 `docker-compose.yml` memakai `network_mode: host` supaya `127.0.0.1` di `.env` tetap mengenai PgSQL aaPanel.
 
+### Error `no pg_hba.conf entry` (28000)
+
+Migrasi **hanya** ke database `komplain` (membuat tabel tiket/staf). `otomaxbank` tidak diubah.
+
+Kalau log masih `user "komplain", database "otomaxbank"`, image lama yang jalan — **Rebuild** dari `main`.
+
+Container Docker tampil sebagai IP `172.20.0.x`. Tambah di `pg_hba.conf` PostgreSQL, lalu reload:
+
+```
+host all all 172.16.0.0/12 scram-sha-256
+```
+
 ### Error `password authentication failed` (28P01)
 
 User OtoMax (`bankdb`) dan user aplikasi (`komplain`) **berbeda**. Migrasi tidak boleh memakai password `komplain` untuk masuk ke `otomaxbank`.
