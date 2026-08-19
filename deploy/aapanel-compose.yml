@@ -12,25 +12,11 @@ services:
       - "host.docker.internal:host-gateway"
     ports:
       - "3001:3001"
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       PORT: "3001"
-      OTOMAX_DB_HOST: ${OTOMAX_DB_HOST}
-      OTOMAX_DB_PORT: ${OTOMAX_DB_PORT}
-      OTOMAX_DB_NAME: ${OTOMAX_DB_NAME}
-      OTOMAX_DB_USER: ${OTOMAX_DB_USER}
-      OTOMAX_DB_PASSWORD: ${OTOMAX_DB_PASSWORD}
-      APP_DB_HOST: ${APP_DB_HOST}
-      APP_DB_PORT: ${APP_DB_PORT}
-      APP_DB_NAME: ${APP_DB_NAME}
-      APP_DB_USER: ${APP_DB_USER}
-      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
-      WEB_DEV_PRIVATE_KEY: ${WEB_DEV_PRIVATE_KEY}
-      SESSION_SECRET: ${SESSION_SECRET}
-      SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME}
-      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
-      SUPERADMIN_NAME: ${SUPERADMIN_NAME}
-      APP_URL: ${APP_URL}
       NEXT_PUBLIC_BASE_PATH: /komplain
       ALLOW_DEV_LOGIN: "false"
     volumes:
