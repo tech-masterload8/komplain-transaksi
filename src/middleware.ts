@@ -38,8 +38,9 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/api")) {
     return NextResponse.json({ error: "Tidak memiliki akses" }, { status: 401 });
   }
-  const login = isAdminPath ? "/admin/login" : "/";
-  return NextResponse.redirect(new URL(login, request.url));
+  const login = request.nextUrl.clone();
+  login.pathname = isAdminPath ? "/admin/login" : "/";
+  return NextResponse.redirect(login);
 }
 
 export const config = {

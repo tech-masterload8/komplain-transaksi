@@ -21,7 +21,7 @@ Deploy produksi memakai **Docker** agar versi Node dan dependensi tidak bentrok 
 - Di dalam aplikasi Android (menu website mode khusus), permintaan pertama membawa header `Authorization` terenkripsi. Server mendekripsinya, mengambil **kode reseller**, membaca `nama` dari tabel `reseller`, lalu menyimpan cookie sesi. Reseller **tidak perlu login** nomor HP/PIN.
 - Layar pelanggan menampilkan `kode` dan `nama` di bagian atas, lalu daftar `transaksi` milik kode itu, diurutkan `tgl_entri` menurun. Pilih transaksi untuk membuat tiket komplain.
 - Header Android tidak dipakai di `/admin`.
-- Staf masuk di `/admin/login` dengan username dan password.
+- Staf masuk di `/admin/login` (produksi: `https://103.179.67.71/komplain/admin/login`) dengan username dan password.
 
 ### Peran admin
 
@@ -45,7 +45,9 @@ npm run migrate
 npm run dev
 ```
 
-- Pelanggan: `http://localhost:3000`
+Kosongkan `NEXT_PUBLIC_BASE_PATH` di `.env` lokal agar aplikasi tetap di root. Lokal boleh `PORT=3000`; produksi memakai **3001** karena 3000 sudah terpakai monitoring.
+
+- Pelanggan: `http://localhost:3000` (jika `PORT=3000`)
 - Admin: `http://localhost:3000/admin/login`
 
 ## Docker di aaPanel
@@ -58,11 +60,16 @@ bash <(curl -fsSL https://raw.githubusercontent.com/tech-masterload8/komplain-tr
 
 Skrip akan clone repo ke `/www/wwwroot/komplain`. Kali pertama ia membuat `.env` — isi password PostgreSQL (`OTOMAX_DB_PASSWORD`, `APP_DB_PASSWORD`) dan `WEB_DEV_PRIVATE_KEY`, lalu jalankan perintah yang sama lagi.
 
-Setelah container jalan:
+Setelah container jalan, **jangan** ganti reverse proxy `/` milik halaman monitoring mirroring database. Tambah path baru:
 
-1. Website aaPanel → Reverse Proxy ke `http://127.0.0.1:3000`
-2. Tambahkan `proxy_set_header Authorization $http_authorization;` agar WebView Android mengenali reseller
-3. Admin: `https://domain-anda/admin/login` (username `steinway`)
+1. Website aaPanel → Reverse Proxy
+   - **Proxy dir:** `/komplain`
+   - **Target:** `http://127.0.0.1:3001` — **tanpa** garis miring di akhir (port 3000 sudah dipakai monitoring)
+2. Sisipkan `deploy/nginx.conf.example` ke vhost yang sama. Jangan ganti `location /`.
+3. Tambahkan `proxy_set_header Authorization $http_authorization;` agar WebView Android mengenali reseller
+4. URL publik:
+   - Pelanggan (Android): `https://103.179.67.71/komplain`
+   - Admin: `https://103.179.67.71/komplain/admin/login` (username `steinway`)
 
 `docker-compose.yml` memakai `network_mode: host` supaya `127.0.0.1` di `.env` tetap mengenai PgSQL aaPanel.
 

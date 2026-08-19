@@ -8,7 +8,9 @@ RUN npm ci
 
 FROM node:20-bookworm-slim AS builder
 WORKDIR /app
+ARG NEXT_PUBLIC_BASE_PATH=/komplain
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN mkdir -p public/uploads
@@ -18,8 +20,10 @@ FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
+ENV PORT=3001
 ENV HOSTNAME=0.0.0.0
+ARG NEXT_PUBLIC_BASE_PATH=/komplain
+ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates wget \
@@ -42,8 +46,8 @@ RUN sed -i 's/\r$//' docker/entrypoint.sh \
   && chmod +x docker/entrypoint.sh \
   && mkdir -p public/uploads
 
-EXPOSE 3000
+EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1
+  CMD sh -c 'wget -qO- "http://127.0.0.1:${PORT:-3001}${NEXT_PUBLIC_BASE_PATH}/api/health" >/dev/null || exit 1'
 
 ENTRYPOINT ["./docker/entrypoint.sh"]

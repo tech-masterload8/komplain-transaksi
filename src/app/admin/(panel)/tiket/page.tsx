@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatDateTime, labelStatusTiket } from "@/lib/format";
+import { apiUrl } from "@/lib/paths";
 
 type Ticket = {
   id: string;
@@ -34,7 +35,7 @@ export default function AdminTicketListPage() {
     const params = new URLSearchParams();
     if (nextStatus) params.set("status", nextStatus);
     if (query) params.set("q", query);
-    const res = await fetch(`/api/admin/tickets?${params.toString()}`);
+    const res = await fetch(apiUrl(`/api/admin/tickets?${params.toString()}`));
     const data = await res.json();
     setItems(data.items || []);
   }

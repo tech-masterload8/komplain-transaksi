@@ -3,12 +3,13 @@ import { parse } from "node:url";
 import next from "next";
 import { ingestAuthorization } from "./src/lib/auth";
 import { loadEnvFiles } from "./src/lib/load-env";
+import { appBasePath } from "./src/lib/paths";
 
 loadEnvFiles();
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "0.0.0.0";
-const port = Number(process.env.PORT || 3000);
+const port = Number(process.env.PORT || 3001);
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -16,6 +17,14 @@ const handle = app.getRequestHandler();
 function headerOf(value: string | string[] | undefined) {
   if (!value) return undefined;
   return Array.isArray(value) ? value[0] : value;
+}
+
+function stripBasePath(pathname: string) {
+  const base = appBasePath();
+  if (base && (pathname === base || pathname.startsWith(`${base}/`))) {
+    return pathname.slice(base.length) || "/";
+  }
+  return pathname;
 }
 
 function isSensitivePath(pathname: string) {
@@ -39,7 +48,8 @@ app.prepare().then(() => {
         res.end();
         return;
       }
-      const isAdminPath = path.startsWith("/admin") || path.startsWith("/api/admin");
+      const logicalPath = stripBasePath(path);
+      const isAdminPath = logicalPath.startsWith("/admin") || logicalPath.startsWith("/api/admin");
       const cookie = headerOf(req.headers.cookie);
       const authorization = isAdminPath ? undefined : headerOf(req.headers.authorization);
       const proto = headerOf(req.headers["x-forwarded-proto"]);
@@ -70,6 +80,6 @@ app.prepare().then(() => {
       res.end("Internal server error");
     }
   }).listen(port, hostname, () => {
-    console.log(`Komplain app ready on http://${hostname}:${port}`);
+    console.log(`Komplain app ready on http://${hostname}:${port}${appBasePath() || ""}`);
   });
 });

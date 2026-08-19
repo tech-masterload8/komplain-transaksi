@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatDateTime, labelStatusTiket } from "@/lib/format";
 import { canManageUsers } from "@/lib/roles";
+import { apiUrl } from "@/lib/paths";
 
 type Stats = { total: number; baru: number; proses: number; selesai: number };
 type Ticket = {
@@ -32,18 +33,18 @@ export default function AdminDashboardPage() {
   const [showSchema, setShowSchema] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/tickets/stats")
+    fetch(apiUrl("/api/admin/tickets/stats"))
       .then((res) => res.json())
       .then((data) => {
         setStats(data.stats || stats);
         setLatest(data.latest || []);
       });
-    fetch("/api/admin/auth/me")
+    fetch(apiUrl("/api/admin/auth/me"))
       .then((res) => res.json())
       .then((data) => {
         if (!canManageUsers(data.user?.role)) return;
         setShowSchema(true);
-        return fetch("/api/admin/otomax-schema").then((res) => res.json());
+        return fetch(apiUrl("/api/admin/otomax-schema")).then((res) => res.json());
       })
       .then((info) => {
         if (info) setSchema(info);

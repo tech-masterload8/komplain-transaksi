@@ -64,7 +64,11 @@ need SESSION_SECRET
 compose up -d --build
 compose ps
 echo
-echo "Aplikasi jalan di port 3000 (network host)."
-echo "Di aaPanel: Website -> Reverse Proxy ke http://127.0.0.1:3000"
+echo "Aplikasi jalan di port 3001 (network host), path /komplain."
+echo "Di aaPanel: Website -> Reverse Proxy"
+echo "  Proxy dir : /komplain"
+echo "  Target    : http://127.0.0.1:3001   (tanpa garis miring di akhir)"
 echo "Tambahkan header Authorization (lihat deploy/nginx.conf.example)."
-echo "Admin: /admin/login"
+echo "Pelanggan : https://103.179.67.71/komplain"
+echo "Admin     : https://103.179.67.71/komplain/admin/login"
+echo "Halaman monitoring di / tidak diganti."

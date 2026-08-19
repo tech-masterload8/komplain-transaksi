@@ -4,19 +4,23 @@
 
 services:
   komplain:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/komplain}
     image: komplain-transaksi:latest
     container_name: komplain-transaksi
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-3001}:3001"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
       - .env
     environment:
       NODE_ENV: production
-      PORT: "3000"
+      PORT: "3001"
+      NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/komplain}
       OTOMAX_DB_HOST: ${OTOMAX_DB_HOST:-host.docker.internal}
       APP_DB_HOST: ${APP_DB_HOST:-host.docker.internal}
     volumes:

@@ -7,6 +7,7 @@ import PhoneShell from "@/components/PhoneShell";
 import { CircleIconButton } from "@/components/CircleIconButton";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { formatDateTime, formatNominal } from "@/lib/format";
+import { apiUrl } from "@/lib/paths";
 
 type Trx = {
   id: string;
@@ -30,12 +31,12 @@ export default function TransaksiDetailPage() {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/transaksi/${params.id}`).then(async (res) => {
+    fetch(apiUrl(`/api/transaksi/${params.id}`)).then(async (res) => {
       if (res.status === 401) return router.replace("/");
       const data = await res.json();
       setItem(data.item);
     });
-    fetch("/api/shortcuts")
+    fetch(apiUrl("/api/shortcuts"))
       .then((res) => res.json())
       .then((data) => setShortcuts(data.items || []));
   }, [params.id, router]);
@@ -44,7 +45,7 @@ export default function TransaksiDetailPage() {
     if (!message.trim() || sending) return;
     setSending(true);
     try {
-      const res = await fetch("/api/conversations", {
+      const res = await fetch(apiUrl("/api/conversations"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transactionId: params.id, message }),

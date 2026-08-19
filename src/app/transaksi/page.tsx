@@ -7,6 +7,7 @@ import PhoneShell from "@/components/PhoneShell";
 import { CircleIconButton } from "@/components/CircleIconButton";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { formatDateTime, truncate, isSuccessStatus } from "@/lib/format";
+import { apiUrl } from "@/lib/paths";
 
 type Trx = {
   id: string;
@@ -29,7 +30,7 @@ export default function TransaksiList() {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     params.set("offset", reset ? "0" : String(items.length));
-    const res = await fetch(`/api/transaksi?${params.toString()}`, { credentials: "include" });
+    const res = await fetch(apiUrl(`/api/transaksi?${params.toString()}`), { credentials: "include" });
     if (res.status === 401) {
       router.replace("/");
       return;

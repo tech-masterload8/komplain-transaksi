@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import type { SessionRole } from "./roles";
+import { cookiePath } from "./paths";
 
 export type SessionUser = {
   role: SessionRole;
@@ -62,7 +63,7 @@ function cookieOptions(secure: boolean) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    path: "/",
+    path: cookiePath(),
     maxAge: MAX_AGE,
     secure,
   };
@@ -85,11 +86,11 @@ export function applyClearCookie(
 }
 
 export function sessionCookie(token: string, cookieName = CUSTOMER_COOKIE, secure = false) {
-  return `${cookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${MAX_AGE}${secure ? "; Secure" : ""}`;
+  return `${cookieName}=${token}; Path=${cookiePath()}; HttpOnly; SameSite=Lax; Max-Age=${MAX_AGE}${secure ? "; Secure" : ""}`;
 }
 
 export function clearSessionCookie(cookieName = CUSTOMER_COOKIE) {
-  return `${cookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+  return `${cookieName}=; Path=${cookiePath()}; HttpOnly; SameSite=Lax; Max-Age=0`;
 }
 
 export function readNamedCookie(cookieHeader: string | undefined, cookieName: string) {

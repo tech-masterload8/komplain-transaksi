@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateTime } from "@/lib/format";
 import { canManageUsers, labelRole } from "@/lib/roles";
+import { apiUrl } from "@/lib/paths";
 
 type Staff = { id: string; username: string; name: string; role: string; created_at: string };
 
@@ -18,8 +19,8 @@ export default function AdminStaffPage() {
 
   async function load() {
     const [staff, auth] = await Promise.all([
-      fetch("/api/admin/staff").then((res) => res.json()),
-      fetch("/api/admin/auth/me").then((res) => res.json()),
+      fetch(apiUrl("/api/admin/staff")).then((res) => res.json()),
+      fetch(apiUrl("/api/admin/auth/me")).then((res) => res.json()),
     ]);
     if (!canManageUsers(auth.user?.role)) {
       router.replace("/admin");
@@ -36,7 +37,7 @@ export default function AdminStaffPage() {
   async function add(event: FormEvent) {
     event.preventDefault();
     setError("");
-    const res = await fetch("/api/admin/staff", {
+    const res = await fetch(apiUrl("/api/admin/staff"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, username, password, role }),
@@ -54,7 +55,7 @@ export default function AdminStaffPage() {
 
   async function remove(item: Staff) {
     if (!confirm(`Hapus pengguna ${item.username}?`)) return;
-    const res = await fetch(`/api/admin/staff/${item.id}`, { method: "DELETE" });
+    const res = await fetch(apiUrl(`/api/admin/staff/${item.id}`), { method: "DELETE" });
     const data = await res.json();
     if (!res.ok) {
       setError(data.error || "Gagal menghapus");

@@ -1,53 +1,23 @@
-server {
-    listen 80;
-    server_name _;
+# Sisipkan ke vhost yang sudah melayani https://103.179.67.71
+# (halaman monitoring di / tetap utuh). Jangan ganti location / yang lama.
+#
+# Di aaPanel: Website -> Reverse Proxy
+#   Proxy dir : /komplain
+#   Target    : http://127.0.0.1:3001   (tanpa garis miring di akhir)
+# Lalu tambahkan header Authorization di konfigurasi kustom.
+#
+# Salah:  proxy_pass http://127.0.0.1:3001/;
+# Benar:  proxy_pass http://127.0.0.1:3001;
 
+location ^~ /komplain {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Authorization $http_authorization;
+    proxy_pass_header Authorization;
+    proxy_read_timeout 60s;
     client_max_body_size 20m;
-
-    # Never serve secrets or git from disk if this vhost has a document root.
-    location ~* /\.env {
-        deny all;
-        return 404;
-    }
-    location ^~ /.git {
-        deny all;
-        return 404;
-    }
-
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-server {
-    listen 80;
-    server_name _;
-
-    client_max_body_size 20m;
-
-    # Never serve secrets or git from disk if this vhost has a document root.
-    location ~* /\.env {
-        deny all;
-        return 404;
-    }
-    location ^~ /.git {
-        deny all;
-        return 404;
-    }
-
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        # Wajib: header Android ENC Key/Signature. Di aaPanel Reverse Proxy,
-        # tempel dua baris ini di konfigurasi kustom.
-        proxy_set_header Authorization $http_authorization;
-        proxy_pass_header Authorization;
-        proxy_read_timeout 60s;
-    }
 }

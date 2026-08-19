@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiUrl } from "@/lib/paths";
 
 export type AgentProfile = {
   kode: string;
@@ -14,7 +15,7 @@ export function useAgent() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth/me", { credentials: "include" })
+    fetch(apiUrl("/api/auth/me"), { credentials: "include" })
       .then((res) => (res.ok ? res.json() : { user: null }))
       .then((data) => {
         if (cancelled) return;

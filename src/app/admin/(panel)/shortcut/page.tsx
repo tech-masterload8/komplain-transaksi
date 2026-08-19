@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { canDeleteRecords } from "@/lib/roles";
+import { apiUrl } from "@/lib/paths";
 
 type Shortcut = { id: number; label: string; active: boolean; sort_order: number };
 
@@ -12,8 +13,8 @@ export default function AdminShortcutPage() {
 
   async function load() {
     const [res, me] = await Promise.all([
-      fetch("/api/admin/shortcuts"),
-      fetch("/api/admin/auth/me").then((r) => r.json()),
+      fetch(apiUrl("/api/admin/shortcuts")),
+      fetch(apiUrl("/api/admin/auth/me")).then((r) => r.json()),
     ]);
     const data = await res.json();
     setItems(data.items || []);
@@ -27,7 +28,7 @@ export default function AdminShortcutPage() {
   async function add(event: FormEvent) {
     event.preventDefault();
     if (!label.trim()) return;
-    await fetch("/api/admin/shortcuts", {
+    await fetch(apiUrl("/api/admin/shortcuts"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label }),
@@ -37,7 +38,7 @@ export default function AdminShortcutPage() {
   }
 
   async function toggle(item: Shortcut) {
-    await fetch("/api/admin/shortcuts", {
+    await fetch(apiUrl("/api/admin/shortcuts"), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: item.id, active: !item.active }),
@@ -47,7 +48,7 @@ export default function AdminShortcutPage() {
 
   async function remove(item: Shortcut) {
     if (!confirm("Hapus shortcut ini?")) return;
-    await fetch("/api/admin/shortcuts", {
+    await fetch(apiUrl("/api/admin/shortcuts"), {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: item.id }),

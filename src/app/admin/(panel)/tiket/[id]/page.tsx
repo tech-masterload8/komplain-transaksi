@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Paperclip, Send } from "lucide-react";
 import { formatDateTime, formatNominal, formatTime, labelStatusTiket } from "@/lib/format";
 import { canDeleteRecords } from "@/lib/roles";
+import { apiUrl } from "@/lib/paths";
 
 type Ticket = {
   id: string;
@@ -53,8 +54,8 @@ export default function AdminTicketDetailPage() {
 
   async function load() {
     const [res, me] = await Promise.all([
-      fetch(`/api/admin/tickets/${params.id}`),
-      fetch("/api/admin/auth/me").then((r) => r.json()),
+      fetch(apiUrl(`/api/admin/tickets/${params.id}`)),
+      fetch(apiUrl("/api/admin/auth/me")).then((r) => r.json()),
     ]);
     const data = await res.json();
     setTicket(data.ticket);
@@ -81,12 +82,12 @@ export default function AdminTicketDetailPage() {
     form.set("body", text);
     if (file) form.set("file", file);
     setText("");
-    await fetch(`/api/admin/tickets/${params.id}/messages`, { method: "POST", body: form });
+    await fetch(apiUrl(`/api/admin/tickets/${params.id}/messages`), { method: "POST", body: form });
     await load();
   }
 
   async function updateTicket(payload: Record<string, unknown>) {
-    await fetch(`/api/admin/tickets/${params.id}`, {
+    await fetch(apiUrl(`/api/admin/tickets/${params.id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -96,7 +97,7 @@ export default function AdminTicketDetailPage() {
 
   async function removeTicket() {
     if (!confirm("Hapus tiket ini beserta seluruh percakapannya?")) return;
-    const res = await fetch(`/api/admin/tickets/${params.id}`, { method: "DELETE" });
+    const res = await fetch(apiUrl(`/api/admin/tickets/${params.id}`), { method: "DELETE" });
     const data = await res.json();
     if (!res.ok) {
       alert(data.error || "Gagal menghapus tiket");
@@ -179,7 +180,7 @@ export default function AdminTicketDetailPage() {
                     <p className="text-[10px] opacity-70">{own ? "CS" : "Pelanggan"} · {message.sender_name}</p>
                     {message.body ? <p className="mt-1">{message.body}</p> : null}
                     {message.attachment_path ? (
-                      <a href={message.attachment_path} target="_blank" className="mt-1 block text-xs underline">
+                      <a href={apiUrl(message.attachment_path)} target="_blank" className="mt-1 block text-xs underline">
                         Lampiran
                       </a>
                     ) : null}

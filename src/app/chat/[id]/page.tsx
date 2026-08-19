@@ -7,6 +7,7 @@ import PhoneShell from "@/components/PhoneShell";
 import { CircleIconButton } from "@/components/CircleIconButton";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { formatTime } from "@/lib/format";
+import { apiUrl } from "@/lib/paths";
 
 type Message = {
   id: string;
@@ -34,9 +35,9 @@ export default function ChatThreadPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function load() {
-    const me = await fetch("/api/auth/me").then((res) => res.json());
+    const me = await fetch(apiUrl("/api/auth/me")).then((res) => res.json());
     if (me.user?.role) setRole(me.user.role);
-    const res = await fetch(`/api/conversations/${params.id}`);
+    const res = await fetch(apiUrl(`/api/conversations/${params.id}`));
     if (res.status === 401) return router.replace("/");
     const data = await res.json();
     setConversation(data.conversation);
@@ -61,7 +62,7 @@ export default function ChatThreadPage() {
     form.set("body", text);
     if (file) form.set("file", file);
     setText("");
-    await fetch(`/api/conversations/${params.id}/messages`, { method: "POST", body: form });
+    await fetch(apiUrl(`/api/conversations/${params.id}/messages`), { method: "POST", body: form });
     await load();
   }
 
@@ -94,7 +95,7 @@ export default function ChatThreadPage() {
                 >
                   {message.body ? <p>{message.body}</p> : null}
                   {message.attachment_path ? (
-                    <a href={message.attachment_path} className="mt-1 block text-xs underline" target="_blank">
+                    <a href={apiUrl(message.attachment_path)} className="mt-1 block text-xs underline" target="_blank">
                       Lampiran
                     </a>
                   ) : null}

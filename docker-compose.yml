@@ -1,10 +1,13 @@
 # Default untuk aaPanel: jaringan host agar 127.0.0.1 di .env
 # tetap mengenai PostgreSQL yang sudah jalan di server.
-# Port aplikasi = PORT di .env (default 3000). Nginx aaPanel proxy ke port itu.
+# Port aplikasi = PORT di .env (default 3001; 3000 sudah terpakai monitoring). Nginx aaPanel proxy ke port itu.
 
 services:
   komplain:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/komplain}
     image: komplain-transaksi:latest
     container_name: komplain-transaksi
     restart: unless-stopped
@@ -13,7 +16,8 @@ services:
       - .env
     environment:
       NODE_ENV: production
-      PORT: ${PORT:-3000}
+      PORT: ${PORT:-3001}
+      NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/komplain}
     volumes:
       - komplain_uploads:/app/public/uploads
 

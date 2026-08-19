@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiUrl } from "@/lib/paths";
 
 export default function AdminLoginForm() {
   const router = useRouter();
@@ -15,7 +16,7 @@ export default function AdminLoginForm() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/auth/login", {
+      const res = await fetch(apiUrl("/api/admin/auth/login"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

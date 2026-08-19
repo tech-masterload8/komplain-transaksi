@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, LogOut, MessageSquareText, Ticket, Users } from "lucide-react";
 import { canManageUsers, labelRole } from "@/lib/roles";
+import { apiUrl } from "@/lib/paths";
 
 const NAV = [
   { href: "/admin", label: "Dasbor", icon: LayoutDashboard },
@@ -28,7 +29,7 @@ export default function AdminShell({
   const items = NAV.filter((item) => !item.superadmin || canManageUsers(role));
 
   async function logout() {
-    await fetch("/api/admin/auth/logout", { method: "POST" });
+    await fetch(apiUrl("/api/admin/auth/logout"), { method: "POST" });
     router.replace("/admin/login");
   }
 
