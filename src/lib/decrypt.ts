@@ -43,6 +43,14 @@ export function decryptAgentHeader(
   privateKeyMix: string,
   encKey: string,
 ): AgentHeaderPayload | null {
+  return decryptAgentHeaderDetailed(signatureB64, privateKeyMix, encKey).payload;
+}
+
+export function decryptAgentHeaderDetailed(
+  signatureB64: string,
+  privateKeyMix: string,
+  encKey: string,
+): { payload: AgentHeaderPayload | null; rawText: string | null } {
   try {
     const pesan = Buffer.from(signatureB64.replace(/\s+/g, ""), "base64");
     const decode64 = Buffer.from(encKey.replace(/\s+/g, ""), "base64");
@@ -51,7 +59,7 @@ export function decryptAgentHeader(
     const mix = Buffer.from(normalizeWebDevPrivateKey(privateKeyMix), "base64");
 
     const ivLength = 16;
-    if (mix.length <= ivLength + 64) return null;
+    if (mix.length <= ivLength + 64) return { payload: null, rawText: null };
 
     const iv = mix.subarray(0, ivLength);
     const hashhmac = mix.subarray(ivLength, ivLength + 64);
@@ -67,7 +75,7 @@ export function decryptAgentHeader(
 
     const hmac = crypto.createHmac("sha3-512", hmacKey).update(opensslenc).digest();
     if (hmac.length !== hashhmac.length || !crypto.timingSafeEqual(hashhmac, hmac)) {
-      return null;
+      return { payload: null, rawText: null };
     }
 
     const rsaKey = toPrivateKey(rsaKeyBuf);
@@ -94,10 +102,56 @@ export function decryptAgentHeader(
       );
     }
 
-    return JSON.parse(decrypted.toString("utf8")) as AgentHeaderPayload;
+    const rawText = decrypted.toString("utf8").replace(/\0+$/g, "").trim();
+    return { payload: parseDecryptedPayload(rawText), rawText };
+  } catch {
+    return { payload: null, rawText: null };
+  }
+}
+
+function parseDecryptedPayload(raw: string): AgentHeaderPayload | null {
+  try {
+    const text = raw.replace(/^\uFEFF/, "").replace(/\0+$/g, "").trim();
+    let parsed: unknown = JSON.parse(text);
+    if (typeof parsed === "string") {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        /* keep string */
+      }
+    }
+    if (Array.isArray(parsed) && parsed[0] && typeof parsed[0] === "object") {
+      parsed = parsed[0];
+    }
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed as AgentHeaderPayload;
   } catch {
     return null;
   }
+}
+
+function lookupPayload(payload: Record<string, unknown>, names: string[]) {
+  const map = new Map<string, unknown>();
+  const walk = (obj: unknown) => {
+    if (!obj || typeof obj !== "object") return;
+    if (Array.isArray(obj)) {
+      obj.forEach(walk);
+      return;
+    }
+    for (const [key, value] of Object.entries(obj)) {
+      map.set(key.toLowerCase().replace(/[^a-z0-9]/g, ""), value);
+      if (value && typeof value === "object") walk(value);
+    }
+  };
+  walk(payload);
+  for (const name of names) {
+    const value = map.get(name.toLowerCase().replace(/[^a-z0-9]/g, ""));
+    if (value == null || value === "") continue;
+    if (typeof value === "object") continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return "";
 }
 
 export function joinHeaderValue(value: string | string[] | undefined) {
@@ -164,23 +218,31 @@ function toPrivateKey(raw: Buffer) {
 }
 
 export function agentCodeFromPayload(payload: AgentHeaderPayload) {
-  const value =
-    payload.kode_reseller ||
-    payload.kodereseller ||
-    payload.kode_agen ||
-    payload.kodeagen ||
-    payload.kode ||
-    payload.id_agen ||
-    payload.agen ||
-    payload.reseller ||
-    "";
-  return String(value).trim();
+  return lookupPayload(payload, [
+    "kode_reseller",
+    "kodereseller",
+    "kode_agen",
+    "kodeagen",
+    "kodeagent",
+    "kode_member",
+    "kodemember",
+    "kode",
+    "id_agen",
+    "idagen",
+    "id_reseller",
+    "idreseller",
+    "agen",
+    "reseller",
+    "member",
+    "username",
+    "id",
+  ]);
 }
 
 export function phoneFromPayload(payload: AgentHeaderPayload) {
-  return String(payload.nomor_hp || payload.nohp || payload.hp || "").trim();
+  return lookupPayload(payload, ["nomor_hp", "nohp", "hp", "phone", "telp", "msisdn"]);
 }
 
 export function nameFromPayload(payload: AgentHeaderPayload) {
-  return String(payload.nama || payload.name || "").trim();
+  return lookupPayload(payload, ["nama", "name", "nama_agen", "namaagen"]);
 }

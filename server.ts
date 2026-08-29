@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { parse } from "node:url";
 import next from "next";
 import { ingestAuthorization } from "./src/lib/auth";
+import { encodeAuthDebugHeader } from "./src/lib/auth-debug";
 import { normalizeWebDevPrivateKey } from "./src/lib/decrypt";
 import { loadEnvFiles } from "./src/lib/load-env";
 import { appBasePath } from "./src/lib/paths";
@@ -74,6 +75,9 @@ app.prepare().then(() => {
           console.error(error);
         }
         req.headers["x-kt-auth-reason"] = ingested.reason;
+        if (ingested.debug) {
+          req.headers["x-kt-auth-debug"] = encodeAuthDebugHeader(ingested.debug);
+        }
       }
       if (ingested.setCookie) {
         const current = res.getHeader("Set-Cookie");

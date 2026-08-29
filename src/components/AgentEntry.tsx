@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PhoneShell from "@/components/PhoneShell";
 import LoginForm from "@/components/LoginForm";
@@ -34,7 +34,7 @@ const REASON_COPY: Record<AuthIngestReason, { title: string; body: string }> = {
   },
   "no-kode": {
     title: "Kode agen tidak ada",
-    body: "Header berhasil dibuka, tetapi tidak berisi kode reseller. Pastikan login agen di aplikasi Android, lalu buka menu Website lagi.",
+    body: "Header berhasil dibuka, tetapi tidak berisi kode reseller. Salin dump di bawah lalu kirim agar field payload bisa dipetakan.",
   },
   "token-expired": {
     title: "Token sudah kedaluwarsa",
@@ -42,10 +42,18 @@ const REASON_COPY: Record<AuthIngestReason, { title: string; body: string }> = {
   },
 };
 
-export default function AgentEntry({ authReason }: { authReason?: AuthIngestReason }) {
+export default function AgentEntry({
+  authReason,
+  debugDump,
+}: {
+  authReason?: AuthIngestReason;
+  debugDump?: string;
+}) {
   const router = useRouter();
   const { user, ready } = useAgent();
   const [manual, setManual] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const areaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (ready && user) router.replace("/transaksi");
@@ -62,9 +70,23 @@ export default function AgentEntry({ authReason }: { authReason?: AuthIngestReas
     ? REASON_COPY[authReason || "no-header"]
     : REASON_COPY.ok;
 
+  async function copyDump() {
+    const text = debugDump || "";
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch {
+      const el = areaRef.current;
+      if (el) {
+        el.focus();
+        el.select();
+      }
+    }
+  }
+
   return (
     <PhoneShell>
-      <div className="flex min-h-dvh flex-col justify-center px-6 py-10">
+      <div className="flex min-h-dvh flex-col justify-start overflow-y-auto px-6 py-10">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
           Komplain Transaksi
         </p>
@@ -72,6 +94,27 @@ export default function AgentEntry({ authReason }: { authReason?: AuthIngestReas
         <p className="mt-3 text-sm leading-6 text-zinc-500">{copy.body}</p>
         {failed && authReason ? (
           <p className="mt-4 text-[11px] font-mono text-zinc-400">kode: {authReason}</p>
+        ) : null}
+        {failed && debugDump ? (
+          <div className="mt-6">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold text-zinc-500">Dump header (bisa disalin)</p>
+              <button
+                type="button"
+                onClick={copyDump}
+                className="rounded-full bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white"
+              >
+                {copied ? "Tersalin" : "Salin"}
+              </button>
+            </div>
+            <textarea
+              ref={areaRef}
+              readOnly
+              value={debugDump}
+              onFocus={(event) => event.currentTarget.select()}
+              className="mt-2 h-64 w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 p-3 font-mono text-[11px] leading-5 text-zinc-700"
+            />
+          </div>
         ) : null}
       </div>
     </PhoneShell>

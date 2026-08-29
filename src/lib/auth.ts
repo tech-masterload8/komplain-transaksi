@@ -1,7 +1,7 @@
 import { appdb } from "./db";
 import {
   agentCodeFromPayload,
-  decryptAgentHeader,
+  decryptAgentHeaderDetailed,
   describeAuthorization,
   joinHeaderValue,
   nameFromPayload,
@@ -12,6 +12,7 @@ import {
 import { findReseller } from "./otomax";
 import { CUSTOMER_COOKIE, readSessionCookie, sessionCookie, signSession, verifySession, type SessionUser } from "./session";
 import type { AuthIngestReason } from "./auth-reason";
+import { redactPayload, type AuthDebugInfo } from "./auth-debug";
 
 export type { AuthIngestReason } from "./auth-reason";
 
@@ -31,7 +32,7 @@ export async function ingestAuthorization(req: {
     signature?: string | string[];
     "x-forwarded-proto"?: string;
   };
-}): Promise<{ user: SessionUser | null; setCookie?: string; reason: AuthIngestReason }> {
+}): Promise<{ user: SessionUser | null; setCookie?: string; reason: AuthIngestReason; debug?: AuthDebugInfo }> {
   const existing = await verifySession(readSessionCookie(req.headers.cookie));
   if (existing) {
     if (existing.role === "agent" && existing.kode && (!existing.name || existing.name === existing.kode)) {
@@ -62,37 +63,61 @@ export async function ingestAuthorization(req: {
       ? `${authorization}, Signature="${signaturePart.replace(/^["']|["']$/g, "")}"`
       : authorization;
 
+  const debugBase = {
+    headerLength: combined?.length || 0,
+    decryptedText: null as string | null,
+    payloadJson: null as string | null,
+    payloadKeys: [] as string[],
+  };
+  const finish = (reason: AuthIngestReason, extra?: Partial<AuthDebugInfo>) =>
+    ({
+      ...debugBase,
+      reason,
+      ...extra,
+    }) satisfies AuthDebugInfo;
+
   const parsed = parseAuthorizationHeader(combined);
   const privateKey = normalizeWebDevPrivateKey(process.env.WEB_DEV_PRIVATE_KEY);
   if (!parsed || !privateKey) {
     if (combined && !privateKey) {
       console.warn("[auth] WEB_DEV_PRIVATE_KEY belum diisi; header Android diabaikan");
-      return { user: null, reason: "no-key" };
+      return { user: null, reason: "no-key", debug: finish("no-key") };
     }
     if (combined && !parsed) {
       console.warn("[auth] Header Authorization ada tetapi bukan format ENC Key/Signature", describeAuthorization(combined));
-      return { user: null, reason: "unparsed" };
+      return { user: null, reason: "unparsed", debug: finish("unparsed") };
     }
-    return { user: null, reason: "no-header" };
+    return { user: null, reason: "no-header", debug: finish("no-header") };
   }
 
-  const payload = decryptAgentHeader(parsed.signature, privateKey, parsed.key);
+  const decrypted = decryptAgentHeaderDetailed(parsed.signature, privateKey, parsed.key);
+  const payload = decrypted.payload;
+  const payloadKeys = payload ? Object.keys(payload) : [];
+  const payloadJson = payload ? JSON.stringify(redactPayload(payload), null, 2) : null;
+  const debugDecrypted = finish("decrypt", {
+    decryptedText: decrypted.rawText,
+    payloadJson,
+    payloadKeys,
+  });
+
   if (!payload) {
     console.warn("[auth] Dekripsi header Android gagal (private key atau payload tidak cocok)");
-    return { user: null, reason: "decrypt" };
+    return { user: null, reason: "decrypt", debug: debugDecrypted };
   }
 
-  const token = String(payload.token || "");
+  const token = String(payload.token || payload.Token || "");
   if (token) {
     const reused = await appdb.query("SELECT token, used_at FROM auth_tokens WHERE token = $1", [token]);
     if (reused.rowCount) {
       const usedAt = new Date(reused.rows[0].used_at).getTime();
-      if (Date.now() - usedAt > TOKEN_TTL_MS) return { user: null, reason: "token-expired" };
+      if (Date.now() - usedAt > TOKEN_TTL_MS) {
+        return { user: null, reason: "token-expired", debug: { ...debugDecrypted, reason: "token-expired" } };
+      }
     } else {
       if (payload.date) {
         const visitDate = new Date(String(payload.date)).getTime();
         if (!Number.isNaN(visitDate) && Date.now() - visitDate > TOKEN_TTL_MS) {
-          return { user: null, reason: "token-expired" };
+          return { user: null, reason: "token-expired", debug: { ...debugDecrypted, reason: "token-expired" } };
         }
       }
     }
@@ -114,7 +139,10 @@ export async function ingestAuthorization(req: {
     name = name || reseller.nama;
   }
 
-  if (!kode) return { user: null, reason: "no-kode" };
+  if (!kode) {
+    console.warn("[auth] Payload tanpa kode agen", { keys: payloadKeys });
+    return { user: null, reason: "no-kode", debug: { ...debugDecrypted, reason: "no-kode" } };
+  }
 
   if (token) {
     await appdb.query(
