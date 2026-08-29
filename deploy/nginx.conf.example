@@ -17,8 +17,14 @@ location ^~ /komplain {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header Authorization $http_authorization;
+    proxy_set_header X-Authorization $http_authorization;
     proxy_pass_header Authorization;
     # Beberapa WAF membuang Authorization. Jika header tidak sampai, izinkan path ini di WAF.
     proxy_read_timeout 60s;
     client_max_body_size 20m;
 }
+
+# Di blok server (bukan di dalam location):
+#   large_client_header_buffers 4 64k;
+#   client_header_buffer_size 16k;
+# Header ENC+Signature bisa panjang; HTTP/3 (quic) kadang memotongnya.

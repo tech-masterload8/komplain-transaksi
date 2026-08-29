@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { parse } from "node:url";
 import next from "next";
 import { ingestAuthorization } from "./src/lib/auth";
+import { normalizeWebDevPrivateKey } from "./src/lib/decrypt";
 import { loadEnvFiles } from "./src/lib/load-env";
 import { appBasePath } from "./src/lib/paths";
 
@@ -14,9 +15,9 @@ const port = Number(process.env.PORT || 3001);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-function headerOf(value: string | string[] | undefined) {
+function headerOf(value: string | string[] | undefined, joinWith = ", ") {
   if (!value) return undefined;
-  return Array.isArray(value) ? value[0] : value;
+  return Array.isArray(value) ? value.join(joinWith) : value;
 }
 
 function stripBasePath(pathname: string) {
@@ -50,22 +51,29 @@ app.prepare().then(() => {
       }
       const logicalPath = stripBasePath(path);
       const isAdminPath = logicalPath.startsWith("/admin") || logicalPath.startsWith("/api/admin");
-      const cookie = headerOf(req.headers.cookie);
+      const cookie = headerOf(req.headers.cookie, "; ");
       const authorization = isAdminPath
         ? undefined
         : headerOf(req.headers.authorization) || headerOf(req.headers["x-authorization"]);
       const proto =
         headerOf(req.headers["x-forwarded-proto"]) ||
         (headerOf(req.headers["x-forwarded-ssl"]) === "on" ? "https" : undefined);
-      let ingested: Awaited<ReturnType<typeof ingestAuthorization>> = { user: null };
+      let ingested: Awaited<ReturnType<typeof ingestAuthorization>> = { user: null, reason: "no-header" };
       if (!isAdminPath) {
         try {
           ingested = await ingestAuthorization({
-            headers: { cookie, authorization, "x-forwarded-proto": proto },
+            headers: {
+              cookie,
+              authorization,
+              "x-authorization": headerOf(req.headers["x-authorization"]),
+              signature: headerOf(req.headers.signature) || headerOf(req.headers["x-signature"]),
+              "x-forwarded-proto": proto,
+            },
           });
         } catch (error) {
           console.error(error);
         }
+        req.headers["x-kt-auth-reason"] = ingested.reason;
       }
       if (ingested.setCookie) {
         const current = res.getHeader("Set-Cookie");
@@ -99,7 +107,7 @@ app.prepare().then(() => {
       res.end("Internal server error");
     }
   }).listen(port, hostname, () => {
-    const keyLen = (process.env.WEB_DEV_PRIVATE_KEY || "").replace(/\s+/g, "").length;
+    const keyLen = normalizeWebDevPrivateKey(process.env.WEB_DEV_PRIVATE_KEY).length;
     console.log(`Komplain app ready on http://${hostname}:${port}${appBasePath() || ""}`);
     console.log(
       keyLen > 80

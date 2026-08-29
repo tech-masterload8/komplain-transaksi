@@ -27,17 +27,28 @@ export type AgentHeaderPayload = {
  *   openssl_private_decrypt(..., OPENSSL_PKCS1_OAEP_PADDING)
  * Authorization: ENC Key="...", Signature="..."
  */
+export function normalizeWebDevPrivateKey(raw: string | undefined | null) {
+  let value = (raw || "").trim();
+  if (
+    (value.startsWith("'") && value.endsWith("'")) ||
+    (value.startsWith('"') && value.endsWith('"'))
+  ) {
+    value = value.slice(1, -1);
+  }
+  return value.replace(/\s+/g, "");
+}
+
 export function decryptAgentHeader(
   signatureB64: string,
   privateKeyMix: string,
   encKey: string,
 ): AgentHeaderPayload | null {
   try {
-    const pesan = Buffer.from(signatureB64, "base64");
-    const decode64 = Buffer.from(encKey, "base64");
+    const pesan = Buffer.from(signatureB64.replace(/\s+/g, ""), "base64");
+    const decode64 = Buffer.from(encKey.replace(/\s+/g, ""), "base64");
     const sha512hex = crypto.createHash("sha512").update(decode64).digest("hex");
     const hmacKey = Buffer.from(sha512hex, "base64");
-    const mix = Buffer.from(privateKeyMix.replace(/\s+/g, ""), "base64");
+    const mix = Buffer.from(normalizeWebDevPrivateKey(privateKeyMix), "base64");
 
     const ivLength = 16;
     if (mix.length <= ivLength + 64) return null;
@@ -89,11 +100,52 @@ export function decryptAgentHeader(
   }
 }
 
-export function parseAuthorizationHeader(header: string | undefined | null) {
+export function joinHeaderValue(value: string | string[] | undefined) {
+  if (!value) return undefined;
+  return Array.isArray(value) ? value.join(", ") : value;
+}
+
+export function describeAuthorization(header: string | undefined | null) {
+  if (!header) return { present: false as const };
+  return {
+    present: true as const,
+    length: header.length,
+    hasEnc: /ENC/i.test(header),
+    hasKey: /Key\s*=/i.test(header),
+    hasSignature: /Signature\s*=/i.test(header),
+    hasQuote: /["']/.test(header),
+    hasComma: header.includes(","),
+    parsed: !!parseAuthorizationHeader(header),
+    prefix: header.slice(0, 48).replace(/[^\x20-\x7E]/g, "?"),
+  };
+}
+
+export function parseAuthorizationHeader(header: string | string[] | undefined | null) {
   if (!header) return null;
-  const match = header.match(/ENC\s+Key="([^"]+)"\s*,\s*Signature="([^"]+)"/i);
-  if (!match?.[1] || !match?.[2]) return null;
-  return { key: match[1], signature: match[2] };
+  const raw = (Array.isArray(header) ? header.join(", ") : header)
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/\r?\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const patterns = [
+    /ENC\s+Key="([^"]+)"\s*,\s*Signature="([^"]+)"/i,
+    /ENC\s+Key='([^']+)'\s*,\s*Signature='([^']+)'/i,
+    /ENC\s+Key=([^\s,]+)\s*,\s*Signature=(\S+)/i,
+    /Key="([^"]+)"\s*,\s*Signature="([^"]+)"/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = raw.match(pattern);
+    if (match?.[1] && match?.[2]) {
+      return {
+        key: match[1].replace(/\s+/g, ""),
+        signature: match[2].replace(/^["']|["']$/g, "").replace(/\s+/g, ""),
+      };
+    }
+  }
+  return null;
 }
 
 function toPrivateKey(raw: Buffer) {

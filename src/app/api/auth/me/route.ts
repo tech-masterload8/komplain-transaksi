@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   const ingested = await ingestAuthorization({
     headers: {
       cookie: request.headers.get("cookie") || undefined,
-      authorization: request.headers.get("authorization") || undefined,
+      authorization: request.headers.get("authorization") || request.headers.get("x-authorization") || undefined,
       "x-forwarded-proto": request.headers.get("x-forwarded-proto") || undefined,
     },
   });

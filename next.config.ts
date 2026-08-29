@@ -5,6 +5,7 @@ const basePath = appBasePath();
 
 const nextConfig: NextConfig = {
   ...(basePath ? { basePath } : {}),
+  skipTrailingSlashRedirect: true,
   poweredByHeader: false,
   serverExternalPackages: ["pg", "bcryptjs"],
 };
