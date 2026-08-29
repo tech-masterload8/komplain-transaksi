@@ -94,19 +94,14 @@ app.prepare().then(() => {
         req.headers.cookie = req.headers.cookie ? `${req.headers.cookie}; ${cookiePair}` : cookiePair;
       }
 
-      // Tutorial: header Android hanya ada di request pertama. Simpan sesi lalu
-      // redirect (setara $_SESSION di contoh PHP) sebelum Next.js merender halaman kosong.
+      // Halaman pelanggan bergantung pada cookie sesi. Proxy aaPanel pernah
+      // menyimpan salinan /transaksi selama setahun, jadi tandai per-cookie.
       const method = (req.method || "GET").toUpperCase();
       const isDocument =
-        method === "GET" &&
-        !logicalPath.startsWith("/api") &&
-        !logicalPath.startsWith("/_next");
-      if (ingested.user && ingested.setCookie && isDocument && (logicalPath === "/" || logicalPath === "")) {
-        const dest = `${appBasePath()}/transaksi`;
-        res.statusCode = 302;
-        res.setHeader("Location", dest);
-        res.end();
-        return;
+        method === "GET" && !logicalPath.startsWith("/api") && !isStaticAsset;
+      if (isDocument) {
+        res.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate");
+        res.setHeader("Vary", "Cookie");
       }
 
       const parsedUrl = parse(req.url || "/", true);

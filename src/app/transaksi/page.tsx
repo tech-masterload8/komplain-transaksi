@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import TransaksiList from "@/components/customer/TransaksiList";
 import { currentUser } from "@/lib/current-user";
-import { listTransactions } from "@/lib/otomax";
+import { loadTransaksiView } from "@/lib/transaksi-data";
 
 export const dynamic = "force-dynamic";
 
@@ -9,14 +9,7 @@ export default async function TransaksiPage() {
   const user = await currentUser();
   if (!user) redirect("/");
 
-  let items: Awaited<ReturnType<typeof listTransactions>> = [];
-  let error: string | null = null;
-  try {
-    items = await listTransactions({ resellerKode: user.kode, limit: 30, offset: 0 });
-  } catch (err) {
-    error = err instanceof Error ? err.message : "Gagal memuat transaksi";
-    console.error("[transaksi] list failed", err);
-  }
+  const { items, error } = await loadTransaksiView(user);
 
   return (
     <TransaksiList
