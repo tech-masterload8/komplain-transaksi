@@ -31,8 +31,8 @@ export default function ChatListPage() {
   async function load(nextStatus = status, query = q) {
     const params = new URLSearchParams({ status: nextStatus });
     if (query) params.set("q", query);
-    const res = await fetch(apiUrl(`/api/conversations?${params.toString()}`));
-    if (res.status === 401) return router.replace("/");
+    const res = await fetch(apiUrl(`/api/conversations?${params.toString()}`), { credentials: "include" });
+    if (res.status === 401) return;
     const data = await res.json();
     setItems(data.items || []);
   }

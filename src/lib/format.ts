@@ -2,21 +2,45 @@ export function formatDateTime(value: Date | string | null | undefined) {
   if (!value) return "-";
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-  const dd = String(date.getDate()).padStart(2, "0");
-  const yy = String(date.getFullYear()).slice(-2);
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  const ss = String(date.getSeconds()).padStart(2, "0");
-  const withSeconds = date.getSeconds() !== 0;
-  return `${dd} ${months[date.getMonth()]} ${yy} ${hh}:${mm}${withSeconds ? `:${ss}` : ""}`;
+  const parts = jakartaParts(date);
+  const withSeconds = parts.second !== "00";
+  return `${parts.day} ${parts.monthName} ${parts.year} ${parts.hour}:${parts.minute}${withSeconds ? `:${parts.second}` : ""}`;
 }
 
 export function formatTime(value: Date | string | null | undefined) {
   if (!value) return "";
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  const parts = jakartaParts(date);
+  return `${parts.hour}:${parts.minute}`;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+function jakartaParts(date: Date) {
+  const map = new Map(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Jakarta",
+      day: "2-digit",
+      month: "numeric",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value]),
+  );
+  const month = Number(map.get("month") || 0);
+  return {
+    day: map.get("day") || "",
+    monthName: MONTHS[Math.max(0, month - 1)] || "",
+    year: map.get("year") || "",
+    hour: (map.get("hour") || "00").padStart(2, "0"),
+    minute: map.get("minute") || "00",
+    second: map.get("second") || "00",
+  };
 }
 
 export function formatNominal(value: number | string | null | undefined) {

@@ -35,10 +35,10 @@ export default function ChatThreadPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function load() {
-    const me = await fetch(apiUrl("/api/auth/me")).then((res) => res.json());
+    const me = await fetch(apiUrl("/api/auth/me"), { credentials: "include" }).then((res) => res.json());
     if (me.user?.role) setRole(me.user.role);
-    const res = await fetch(apiUrl(`/api/conversations/${params.id}`));
-    if (res.status === 401) return router.replace("/");
+    const res = await fetch(apiUrl(`/api/conversations/${params.id}`), { credentials: "include" });
+    if (res.status === 401) return;
     const data = await res.json();
     setConversation(data.conversation);
     setMessages(data.messages || []);

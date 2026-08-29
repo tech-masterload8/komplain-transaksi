@@ -44,7 +44,7 @@ export default function TransaksiList({
       params.set("offset", reset ? "0" : String(items.length));
       const res = await fetch(apiUrl(`/api/transaksi?${params.toString()}`), { credentials: "include" });
       if (res.status === 401) {
-        router.replace("/");
+        setError("Sesi tidak terbaca. Tutup menu Website, lalu buka lagi dari APK.");
         return;
       }
       const data = (await res.json()) as { items?: TrxItem[]; error?: string };

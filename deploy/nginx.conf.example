@@ -19,6 +19,8 @@ location ^~ /komplain {
     proxy_set_header Authorization $http_authorization;
     proxy_set_header X-Authorization $http_authorization;
     proxy_pass_header Authorization;
+    proxy_cache off;
+    proxy_buffering off;
     # Beberapa WAF membuang Authorization. Jika header tidak sampai, izinkan path ini di WAF.
     proxy_read_timeout 60s;
     client_max_body_size 20m;

@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     service: "komplain-transaksi",
+    gitSha: process.env.KT_GIT_SHA || "unknown",
     webDevKeyLoaded: key.length > 80,
     authReason: reason || undefined,
     authorization: describeAuthorization(authorization),

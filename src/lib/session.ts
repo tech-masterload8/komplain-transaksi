@@ -62,7 +62,7 @@ export function requestIsHttps(request: Request) {
 function cookieOptions(secure: boolean) {
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
+    sameSite: (secure ? "none" : "lax") as "none" | "lax",
     path: cookiePath(),
     maxAge: MAX_AGE,
     secure,
@@ -86,7 +86,8 @@ export function applyClearCookie(
 }
 
 export function sessionCookie(token: string, cookieName = CUSTOMER_COOKIE, secure = false) {
-  return `${cookieName}=${token}; Path=${cookiePath()}; HttpOnly; SameSite=Lax; Max-Age=${MAX_AGE}${secure ? "; Secure" : ""}`;
+  const sameSite = secure ? "None" : "Lax";
+  return `${cookieName}=${token}; Path=${cookiePath()}; HttpOnly; SameSite=${sameSite}; Max-Age=${MAX_AGE}${secure ? "; Secure" : ""}`;
 }
 
 export function clearSessionCookie(cookieName = CUSTOMER_COOKIE) {

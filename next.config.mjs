@@ -13,15 +13,13 @@ const nextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["pg", "bcryptjs"],
   async headers() {
+    const noStore = [{ key: "Cache-Control", value: "private, no-store, no-cache, must-revalidate" }];
     return [
-      {
-        source: "/transaksi",
-        headers: [{ key: "Cache-Control", value: "private, no-store, no-cache, must-revalidate" }],
-      },
-      {
-        source: "/transaksi/:path*",
-        headers: [{ key: "Cache-Control", value: "private, no-store, no-cache, must-revalidate" }],
-      },
+      { source: "/", headers: noStore },
+      { source: "/transaksi", headers: noStore },
+      { source: "/transaksi/:path*", headers: noStore },
+      { source: "/chat", headers: noStore },
+      { source: "/chat/:path*", headers: noStore },
     ];
   },
 };

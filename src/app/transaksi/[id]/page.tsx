@@ -31,8 +31,8 @@ export default function TransaksiDetailPage() {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    fetch(apiUrl(`/api/transaksi/${params.id}`)).then(async (res) => {
-      if (res.status === 401) return router.replace("/");
+    fetch(apiUrl(`/api/transaksi/${params.id}`), { credentials: "include" }).then(async (res) => {
+      if (res.status === 401) return;
       const data = await res.json();
       setItem(data.item);
     });

@@ -23,7 +23,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3001
 ENV HOSTNAME=0.0.0.0
 ARG NEXT_PUBLIC_BASE_PATH=/komplain
+ARG KT_GIT_SHA=unknown
 ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
+ENV KT_GIT_SHA=$KT_GIT_SHA
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates wget \
