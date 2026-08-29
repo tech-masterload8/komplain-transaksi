@@ -39,7 +39,7 @@ COPY --from=builder /app/server.ts ./server.ts
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/sql ./sql
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/next.config.ts ./next.config.ts
+COPY --from=builder /app/next.config.mjs ./next.config.mjs
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
 
 RUN sed -i 's/\r$//' docker/entrypoint.sh \

@@ -69,7 +69,10 @@ export async function ingestAuthorization(req: {
       return { user: null, reason: "no-key", debug: finish("no-key") };
     }
     if (combined && !parsed) {
-      console.warn("[auth] Header Authorization ada tetapi bukan format ENC Key/Signature", describeAuthorization(combined));
+      const desc = describeAuthorization(combined);
+      if (desc.hasEnc || desc.hasKey || desc.hasSignature) {
+        console.warn("[auth] Header Authorization ada tetapi bukan format ENC Key/Signature", desc);
+      }
       return { user: null, reason: "unparsed", debug: finish("unparsed") };
     }
     return { user: null, reason: "no-header", debug: finish("no-header") };

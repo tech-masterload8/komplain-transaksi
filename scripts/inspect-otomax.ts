@@ -13,7 +13,9 @@ async function main() {
       return;
     }
     console.log("[otomax] struktur terbaca (hanya SELECT)");
-    console.log(JSON.stringify(info, null, 2));
+    console.log(
+      `[otomax] trx=${info.transaksi?.table} reseller=${info.reseller?.table} produk=${info.produk?.table} pengirim=${info.pengirim?.table}`,
+    );
   } finally {
     await closeDb();
   }
