@@ -32,7 +32,7 @@ export default function AgentEntry() {
         </h1>
         <p className="mt-3 text-sm leading-6 text-zinc-500">
           {ready && !user
-            ? "Buka menu ini dari aplikasi Android agar kode reseller dikirim otomatis. Login nomor HP dan PIN tidak diperlukan."
+            ? "Header kode reseller hanya dikirim sekali saat menu Website (Mode Khusus) pertama kali dibuka. Jangan refresh halaman. Tutup menu, lalu buka lagi dari aplikasi Android. Login nomor HP dan PIN tidak diperlukan."
             : "Kode reseller dari aplikasi sedang dicocokkan. Daftar transaksi akan muncul setelah akun dikenali."}
         </p>
       </div>

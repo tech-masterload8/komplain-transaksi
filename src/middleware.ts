@@ -6,6 +6,7 @@ function isPublic(pathname: string) {
   return (
     pathname === "/" ||
     pathname === "/api/health" ||
+    pathname === "/api/auth/me" ||
     pathname === "/api/auth/login" ||
     pathname === "/admin/login" ||
     pathname === "/api/admin/auth/login" ||

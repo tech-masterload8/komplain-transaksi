@@ -51,8 +51,12 @@ app.prepare().then(() => {
       const logicalPath = stripBasePath(path);
       const isAdminPath = logicalPath.startsWith("/admin") || logicalPath.startsWith("/api/admin");
       const cookie = headerOf(req.headers.cookie);
-      const authorization = isAdminPath ? undefined : headerOf(req.headers.authorization);
-      const proto = headerOf(req.headers["x-forwarded-proto"]);
+      const authorization = isAdminPath
+        ? undefined
+        : headerOf(req.headers.authorization) || headerOf(req.headers["x-authorization"]);
+      const proto =
+        headerOf(req.headers["x-forwarded-proto"]) ||
+        (headerOf(req.headers["x-forwarded-ssl"]) === "on" ? "https" : undefined);
       let ingested: Awaited<ReturnType<typeof ingestAuthorization>> = { user: null };
       if (!isAdminPath) {
         try {
@@ -72,6 +76,21 @@ app.prepare().then(() => {
         req.headers.cookie = req.headers.cookie ? `${req.headers.cookie}; ${cookiePair}` : cookiePair;
       }
 
+      // Tutorial: header Android hanya ada di request pertama. Simpan sesi lalu
+      // redirect (setara $_SESSION di contoh PHP) sebelum Next.js merender halaman kosong.
+      const method = (req.method || "GET").toUpperCase();
+      const isDocument =
+        method === "GET" &&
+        !logicalPath.startsWith("/api") &&
+        !logicalPath.startsWith("/_next");
+      if (ingested.user && ingested.setCookie && isDocument && (logicalPath === "/" || logicalPath === "")) {
+        const dest = `${appBasePath()}/transaksi`;
+        res.statusCode = 302;
+        res.setHeader("Location", dest);
+        res.end();
+        return;
+      }
+
       const parsedUrl = parse(req.url || "/", true);
       await handle(req, res, parsedUrl);
     } catch (error) {
@@ -80,6 +99,12 @@ app.prepare().then(() => {
       res.end("Internal server error");
     }
   }).listen(port, hostname, () => {
+    const keyLen = (process.env.WEB_DEV_PRIVATE_KEY || "").replace(/\s+/g, "").length;
     console.log(`Komplain app ready on http://${hostname}:${port}${appBasePath() || ""}`);
+    console.log(
+      keyLen > 80
+        ? `WEB_DEV_PRIVATE_KEY loaded (${keyLen} chars)`
+        : "WEB_DEV_PRIVATE_KEY missing or too short — header Android tidak bisa didekripsi",
+    );
   });
 });

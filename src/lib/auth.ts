@@ -43,11 +43,21 @@ export async function ingestAuthorization(req: {
   }
 
   const parsed = parseAuthorizationHeader(req.headers.authorization);
-  const privateKey = process.env.WEB_DEV_PRIVATE_KEY || "";
-  if (!parsed || !privateKey) return { user: null };
+  const privateKey = (process.env.WEB_DEV_PRIVATE_KEY || "").replace(/\s+/g, "");
+  if (!parsed || !privateKey) {
+    if (req.headers.authorization && !privateKey) {
+      console.warn("[auth] WEB_DEV_PRIVATE_KEY belum diisi; header Android diabaikan");
+    } else if (req.headers.authorization && !parsed) {
+      console.warn("[auth] Header Authorization ada tetapi bukan format ENC Key/Signature");
+    }
+    return { user: null };
+  }
 
   const payload = decryptAgentHeader(parsed.signature, privateKey, parsed.key);
-  if (!payload) return { user: null };
+  if (!payload) {
+    console.warn("[auth] Dekripsi header Android gagal (private key atau payload tidak cocok)");
+    return { user: null };
+  }
 
   const token = String(payload.token || "");
   if (token) {

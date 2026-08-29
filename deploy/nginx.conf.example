@@ -18,6 +18,7 @@ location ^~ /komplain {
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header Authorization $http_authorization;
     proxy_pass_header Authorization;
+    # Beberapa WAF membuang Authorization. Jika header tidak sampai, izinkan path ini di WAF.
     proxy_read_timeout 60s;
     client_max_body_size 20m;
 }
