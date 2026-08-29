@@ -8,6 +8,8 @@ import {
   normalizeWebDevPrivateKey,
   parseAuthorizationHeader,
   phoneFromPayload,
+  tokenFromPayload,
+  dateFromPayload,
 } from "./decrypt";
 import { findReseller } from "./otomax";
 import { CUSTOMER_COOKIE, readSessionCookie, sessionCookie, signSession, verifySession, type SessionUser } from "./session";
@@ -105,7 +107,7 @@ export async function ingestAuthorization(req: {
     return { user: null, reason: "decrypt", debug: debugDecrypted };
   }
 
-  const token = String(payload.token || payload.Token || "");
+  const token = tokenFromPayload(payload);
   if (token) {
     const reused = await appdb.query("SELECT token, used_at FROM auth_tokens WHERE token = $1", [token]);
     if (reused.rowCount) {
@@ -114,11 +116,9 @@ export async function ingestAuthorization(req: {
         return { user: null, reason: "token-expired", debug: { ...debugDecrypted, reason: "token-expired" } };
       }
     } else {
-      if (payload.date) {
-        const visitDate = new Date(String(payload.date)).getTime();
-        if (!Number.isNaN(visitDate) && Date.now() - visitDate > TOKEN_TTL_MS) {
-          return { user: null, reason: "token-expired", debug: { ...debugDecrypted, reason: "token-expired" } };
-        }
+      const visitDate = new Date(dateFromPayload(payload)).getTime();
+      if (!Number.isNaN(visitDate) && Date.now() - visitDate > TOKEN_TTL_MS) {
+        return { user: null, reason: "token-expired", debug: { ...debugDecrypted, reason: "token-expired" } };
       }
     }
   }

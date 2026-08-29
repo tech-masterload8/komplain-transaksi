@@ -8,6 +8,8 @@ export type AgentHeaderPayload = {
   kodereseller?: string;
   kodeagen?: string;
   kode_agen?: string;
+  idmember?: string;
+  id_member?: string;
   id_agen?: string;
   agen?: string;
   reseller?: string;
@@ -219,6 +221,8 @@ function toPrivateKey(raw: Buffer) {
 
 export function agentCodeFromPayload(payload: AgentHeaderPayload) {
   return lookupPayload(payload, [
+    "idmember",
+    "id_member",
     "kode_reseller",
     "kodereseller",
     "kode_agen",
@@ -237,6 +241,14 @@ export function agentCodeFromPayload(payload: AgentHeaderPayload) {
     "username",
     "id",
   ]);
+}
+
+export function tokenFromPayload(payload: AgentHeaderPayload) {
+  return lookupPayload(payload, ["token"]);
+}
+
+export function dateFromPayload(payload: AgentHeaderPayload) {
+  return lookupPayload(payload, ["date", "tgl", "tanggal"]);
 }
 
 export function phoneFromPayload(payload: AgentHeaderPayload) {
