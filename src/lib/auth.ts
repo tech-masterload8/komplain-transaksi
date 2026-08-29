@@ -37,23 +37,6 @@ export async function ingestAuthorization(req: {
 }): Promise<{ user: SessionUser | null; setCookie?: string; reason: AuthIngestReason; debug?: AuthDebugInfo }> {
   const existing = await verifySession(readSessionCookie(req.headers.cookie));
   if (existing) {
-    if (existing.role === "agent" && existing.kode && (!existing.name || existing.name === existing.kode)) {
-      try {
-        const reseller = await findReseller({ kode: existing.kode });
-        if (reseller?.nama && reseller.nama !== existing.name) {
-          const user: SessionUser = {
-            ...existing,
-            name: reseller.nama,
-            phone: existing.phone || reseller.phone,
-          };
-          const jwt = await signSession(user);
-          const proto = (req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
-          return { user, setCookie: sessionCookie(jwt, CUSTOMER_COOKIE, proto === "https"), reason: "ok" };
-        }
-      } catch {
-        /* keep the existing session */
-      }
-    }
     return { user: existing, reason: "has-session" };
   }
 

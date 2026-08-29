@@ -9,11 +9,16 @@ export type AgentProfile = {
   phone?: string;
 };
 
-export function useAgent() {
-  const [user, setUser] = useState<AgentProfile | null>(null);
-  const [ready, setReady] = useState(false);
+export function useAgent(initial?: AgentProfile | null) {
+  const [user, setUser] = useState<AgentProfile | null>(initial ?? null);
+  const [ready, setReady] = useState(Boolean(initial?.kode));
 
   useEffect(() => {
+    if (initial?.kode) {
+      setUser(initial);
+      setReady(true);
+      return;
+    }
     let cancelled = false;
     fetch(apiUrl("/api/auth/me"), { credentials: "include" })
       .then((res) => (res.ok ? res.json() : { user: null }))
@@ -33,7 +38,7 @@ export function useAgent() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initial?.kode]);
 
   return { user, ready };
 }

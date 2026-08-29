@@ -52,6 +52,10 @@ app.prepare().then(() => {
       }
       const logicalPath = stripBasePath(path);
       const isAdminPath = logicalPath.startsWith("/admin") || logicalPath.startsWith("/api/admin");
+      const isStaticAsset =
+        logicalPath.startsWith("/_next") ||
+        logicalPath.startsWith("/uploads") ||
+        logicalPath === "/favicon.ico";
       const cookie = headerOf(req.headers.cookie, "; ");
       const authorization = isAdminPath
         ? undefined
@@ -60,7 +64,9 @@ app.prepare().then(() => {
         headerOf(req.headers["x-forwarded-proto"]) ||
         (headerOf(req.headers["x-forwarded-ssl"]) === "on" ? "https" : undefined);
       let ingested: Awaited<ReturnType<typeof ingestAuthorization>> = { user: null, reason: "no-header" };
-      if (!isAdminPath) {
+      // JS/CSS must not wait on OtoMax. If ingest ran here, a slow findReseller
+      // left the transaksi page as an empty prerendered shell.
+      if (!isAdminPath && !isStaticAsset) {
         try {
           ingested = await ingestAuthorization({
             headers: {

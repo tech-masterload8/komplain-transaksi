@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api-auth";
 import { listTransactions } from "@/lib/otomax";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const { user, error } = await requireUser();
   if (error || !user) return error!;
@@ -15,6 +17,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Kode reseller tidak terbaca" }, { status: 401 });
   }
 
-  const items = await listTransactions({ resellerKode, search, limit, offset });
-  return NextResponse.json({ items });
+  try {
+    const items = await listTransactions({ resellerKode, search, limit, offset });
+    return NextResponse.json({ items, kode: resellerKode || null });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Gagal memuat transaksi";
+    console.error("[api/transaksi]", message);
+    return NextResponse.json({ error: message, items: [], kode: resellerKode || null }, { status: 500 });
+  }
 }

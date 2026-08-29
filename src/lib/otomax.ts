@@ -219,20 +219,43 @@ export async function inspectOtomaxSchema(): Promise<OtomaxSchemaInfo> {
   }
 }
 
+function asText(value: unknown) {
+  if (value == null) return "";
+  if (typeof value === "bigint") return value.toString();
+  if (value instanceof Date) return value.toISOString();
+  return String(value);
+}
+
+function resellerCodeCandidates(kode: string) {
+  const raw = kode.trim();
+  const codes = new Set<string>([raw, raw.toLowerCase(), raw.toUpperCase()]);
+  const withoutPrefix = raw.replace(/^[A-Za-z]+/, "");
+  if (withoutPrefix && withoutPrefix !== raw) {
+    codes.add(withoutPrefix);
+    codes.add(withoutPrefix.toLowerCase());
+  }
+  return [...codes].filter(Boolean);
+}
+
 function rowToTransaction(row: Record<string, unknown>): OtomaxTransaction {
+  const nominalRaw = row.nominal;
+  const nominal =
+    nominalRaw == null || nominalRaw === ""
+      ? null
+      : Number(typeof nominalRaw === "bigint" ? nominalRaw.toString() : nominalRaw);
   return {
-    id: String(row.id ?? ""),
-    tanggalEntri: row.tanggal_entri ? String(row.tanggal_entri) : null,
-    tanggalStatus: row.tanggal_status ? String(row.tanggal_status) : null,
-    tujuan: String(row.tujuan ?? ""),
-    nominal: row.nominal == null ? null : Number(row.nominal),
-    keterangan: String(row.keterangan ?? ""),
-    serialNumber: String(row.serial_number ?? ""),
-    kodeProduk: String(row.kode_produk ?? ""),
-    namaProduk: String(row.nama_produk ?? ""),
-    kodeReseller: String(row.kode_reseller ?? ""),
-    pengirim: String(row.pengirim ?? ""),
-    status: (row.status as string | number | null) ?? null,
+    id: asText(row.id),
+    tanggalEntri: row.tanggal_entri ? asText(row.tanggal_entri) : null,
+    tanggalStatus: row.tanggal_status ? asText(row.tanggal_status) : null,
+    tujuan: asText(row.tujuan),
+    nominal: Number.isFinite(nominal) ? nominal : null,
+    keterangan: asText(row.keterangan),
+    serialNumber: asText(row.serial_number),
+    kodeProduk: asText(row.kode_produk),
+    namaProduk: asText(row.nama_produk),
+    kodeReseller: asText(row.kode_reseller),
+    pengirim: asText(row.pengirim),
+    status: row.status == null ? null : asText(row.status),
   };
 }
 
@@ -256,7 +279,7 @@ function transaksiSelect(
   ];
   const join =
     product.table && product.kode && col.kodeProduk
-      ? `LEFT JOIN ${ident(product.table)} p ON ${qualify("p", product.kode)} = ${qualify("t", col.kodeProduk)}`
+      ? `LEFT JOIN ${ident(product.table)} p ON CAST(${qualify("p", product.kode)} AS TEXT) = CAST(${qualify("t", col.kodeProduk)} AS TEXT)`
       : "";
   return { fields: fields.join(", "), join };
 }
@@ -276,8 +299,11 @@ export async function listTransactions(options: {
   const params: unknown[] = [];
 
   if (options.resellerKode) {
-    params.push(options.resellerKode.trim());
-    where.push(`lower(btrim(CAST(${qualify("t", col.kodeReseller)} AS TEXT))) = lower(btrim($${params.length}::text))`);
+    const codes = resellerCodeCandidates(options.resellerKode);
+    params.push(codes.map((code) => code.toLowerCase()));
+    where.push(
+      `lower(btrim(CAST(${qualify("t", col.kodeReseller)} AS TEXT))) = ANY($${params.length}::text[])`,
+    );
   }
 
   if (options.search) {
@@ -318,7 +344,13 @@ export async function listTransactions(options: {
   `;
 
   const { rows } = await otomax.query(sql, params);
-  return rows.map((row) => rowToTransaction(row as Record<string, unknown>));
+  const items = rows.map((row) => rowToTransaction(row as Record<string, unknown>));
+  if (options.resellerKode) {
+    console.log(
+      `[otomax] transaksi kode=${options.resellerKode} match=${resellerCodeCandidates(options.resellerKode).join(",")} count=${items.length}`,
+    );
+  }
+  return items;
 }
 
 export async function getTransaction(id: string) {

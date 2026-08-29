@@ -21,13 +21,16 @@ function poolConfig(prefix: "OTOMAX" | "APP", extra?: PoolConfig): PoolConfig {
     password: env("PASSWORD") || "",
     max: 10,
     idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 8_000,
     ...extra,
   };
 }
 
 /** OtoMax source data. Application code must only SELECT. */
 export const otomax = new Pool(
-  poolConfig("OTOMAX", { options: "-c default_transaction_read_only=on" }),
+  poolConfig("OTOMAX", {
+    options: "-c default_transaction_read_only=on -c statement_timeout=15000",
+  }),
 );
 
 /** Complaint chats, staff, and sessions. */
