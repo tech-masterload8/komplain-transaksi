@@ -1,6 +1,7 @@
 "use client";
 
-import { useAgent, type AgentProfile } from "./useAgent";
+import { useAgent } from "./useAgent";
+import type { AgentProfile } from "@/lib/agent-profile";
 
 export function CustomerHeader({
   title,
@@ -11,8 +12,7 @@ export function CustomerHeader({
   extra?: React.ReactNode;
   user?: AgentProfile | null;
 }) {
-  const { user: fetched } = useAgent(userProp);
-  const user = userProp ?? fetched;
+  const { user } = useAgent(userProp);
 
   return (
     <header className="mb-5">

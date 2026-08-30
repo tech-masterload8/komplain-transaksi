@@ -37,7 +37,19 @@ export async function ingestAuthorization(req: {
 }): Promise<{ user: SessionUser | null; setCookie?: string; reason: AuthIngestReason; debug?: AuthDebugInfo }> {
   const existing = await verifySession(readSessionCookie(req.headers.cookie));
   if (existing) {
-    return { user: existing, reason: "has-session" };
+    // Perbarui masa berlaku tiap kunjungan. Header Android tidak datang lagi,
+    // jadi sesi tidak boleh kedaluwarsa saat reseller masih membuka halaman.
+    try {
+      const jwt = await signSession(existing);
+      const proto = (req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+      return {
+        user: existing,
+        setCookie: sessionCookie(jwt, CUSTOMER_COOKIE, proto === "https"),
+        reason: "has-session",
+      };
+    } catch {
+      return { user: existing, reason: "has-session" };
+    }
   }
 
   const authorization =

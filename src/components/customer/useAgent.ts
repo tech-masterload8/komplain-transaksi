@@ -1,21 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAgentContext } from "./AgentContext";
 import { apiUrl } from "@/lib/paths";
+import type { AgentProfile } from "@/lib/agent-profile";
 
-export type AgentProfile = {
-  kode: string;
-  name: string;
-  phone?: string;
-};
+export type { AgentProfile } from "@/lib/agent-profile";
 
 export function useAgent(initial?: AgentProfile | null) {
-  const [user, setUser] = useState<AgentProfile | null>(initial ?? null);
-  const [ready, setReady] = useState(Boolean(initial?.kode));
+  const fromContext = useAgentContext();
+  const known = initial?.kode ? initial : fromContext;
+  const [user, setUser] = useState<AgentProfile | null>(known ?? null);
+  const [ready, setReady] = useState(Boolean(known?.kode));
 
   useEffect(() => {
-    if (initial?.kode) {
-      setUser(initial);
+    if (known?.kode) {
+      setUser(known);
       setReady(true);
       return;
     }
@@ -38,7 +38,7 @@ export function useAgent(initial?: AgentProfile | null) {
     return () => {
       cancelled = true;
     };
-  }, [initial?.kode]);
+  }, [known?.kode, known?.name, known?.phone]);
 
   return { user, ready };
 }

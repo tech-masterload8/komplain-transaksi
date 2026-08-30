@@ -29,17 +29,28 @@ export default function TransaksiDetailPage() {
   const [shortcuts, setShortcuts] = useState<{ id: number; label: string }[]>([]);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(apiUrl(`/api/transaksi/${params.id}`), { credentials: "include" }).then(async (res) => {
-      if (res.status === 401) return;
-      const data = await res.json();
-      setItem(data.item);
-    });
-    fetch(apiUrl("/api/shortcuts"))
-      .then((res) => res.json())
-      .then((data) => setShortcuts(data.items || []));
-  }, [params.id, router]);
+    fetch(apiUrl(`/api/transaksi/${params.id}`), { credentials: "include" })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}) as { item?: Trx; error?: string });
+        if (!res.ok) {
+          setError(
+            res.status === 401
+              ? "Sesi tidak terbaca. Tutup menu Website, lalu buka lagi dari APK."
+              : data.error || "Transaksi tidak bisa dibuka.",
+          );
+          return;
+        }
+        setItem(data.item);
+      })
+      .catch(() => setError("Tidak bisa memuat detail transaksi."));
+    fetch(apiUrl("/api/shortcuts"), { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : { items: [] }))
+      .then((data) => setShortcuts(data.items || []))
+      .catch(() => setShortcuts([]));
+  }, [params.id]);
 
   async function send() {
     if (!message.trim() || sending) return;
@@ -47,6 +58,7 @@ export default function TransaksiDetailPage() {
     try {
       const res = await fetch(apiUrl("/api/conversations"), {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transactionId: params.id, message }),
       });
@@ -91,7 +103,14 @@ export default function TransaksiDetailPage() {
           }
         />
 
+        {error ? (
+          <p className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-center text-sm text-red-600">{error}</p>
+        ) : null}
+
         <div className="rounded-[24px] border border-zinc-100 p-4 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+          {!item && !error ? (
+            <p className="py-6 text-center text-sm text-zinc-400">Memuat detail transaksi...</p>
+          ) : null}
           {rows.map((row) => (
             <div key={row.label} className="flex gap-3 border-b border-zinc-100 py-2.5 last:border-b-0">
               <span className="mt-0.5 text-zinc-400">{row.icon}</span>
