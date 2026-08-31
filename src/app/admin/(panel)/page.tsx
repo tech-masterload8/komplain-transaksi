@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatDateTime, labelStatusTiket } from "@/lib/format";
-import { canManageUsers } from "@/lib/roles";
 import { apiUrl } from "@/lib/paths";
 
 type Stats = { total: number; baru: number; proses: number; selesai: number };
@@ -18,19 +17,10 @@ type Ticket = {
   last_message_at: string | null;
   created_at: string;
 };
-type SchemaInfo = {
-  ok: boolean;
-  error?: string;
-  transaksi?: { table: string; mapping: Record<string, string | null> };
-  reseller?: { table: string; mapping: Record<string, string | null> };
-  produk?: { table: string | null; mapping: Record<string, string | null> };
-};
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats>({ total: 0, baru: 0, proses: 0, selesai: 0 });
   const [latest, setLatest] = useState<Ticket[]>([]);
-  const [schema, setSchema] = useState<SchemaInfo | null>(null);
-  const [showSchema, setShowSchema] = useState(false);
 
   useEffect(() => {
     fetch(apiUrl("/api/admin/tickets/stats"))
@@ -38,16 +28,6 @@ export default function AdminDashboardPage() {
       .then((data) => {
         setStats(data.stats || stats);
         setLatest(data.latest || []);
-      });
-    fetch(apiUrl("/api/admin/auth/me"))
-      .then((res) => res.json())
-      .then((data) => {
-        if (!canManageUsers(data.user?.role)) return;
-        setShowSchema(true);
-        return fetch(apiUrl("/api/admin/otomax-schema")).then((res) => res.json());
-      })
-      .then((info) => {
-        if (info) setSchema(info);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -72,46 +52,6 @@ export default function AdminDashboardPage() {
           </Link>
         ))}
       </div>
-
-      {showSchema ? (
-        <div className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold">Sumber data OtoMax (hanya baca)</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Transaksi pelanggan difilter dengan kode agen dari header Android, lalu dicocokkan ke kolom{" "}
-            <code>kode_reseller</code>.
-          </p>
-          {schema?.ok ? (
-            <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
-              <div>
-                <dt className="text-xs text-slate-400">Tabel transaksi</dt>
-                <dd className="font-medium">{schema.transaksi?.table}</dd>
-                <dd className="mt-1 text-slate-600">
-                  ID: {schema.transaksi?.mapping.id || "-"} · Reseller:{" "}
-                  {schema.transaksi?.mapping.kodeReseller || "-"} · Produk:{" "}
-                  {schema.transaksi?.mapping.kodeProduk || "-"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-slate-400">Tabel reseller</dt>
-                <dd className="font-medium">{schema.reseller?.table}</dd>
-                <dd className="mt-1 text-slate-600">
-                  Kode: {schema.reseller?.mapping.kode || "-"} · Nama: {schema.reseller?.mapping.nama || "-"} · HP:{" "}
-                  {schema.reseller?.mapping.phone || "-"}
-                </dd>
-              </div>
-              <div className="md:col-span-2">
-                <dt className="text-xs text-slate-400">Tabel produk</dt>
-                <dd className="font-medium">{schema.produk?.table || "-"}</dd>
-                <dd className="mt-1 text-slate-600">
-                  Kode: {schema.produk?.mapping.kode || "-"} · Nama: {schema.produk?.mapping.nama || "-"}
-                </dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="mt-3 text-sm text-red-500">{schema?.error || "Belum bisa membaca otomaxbank."}</p>
-          )}
-        </div>
-      ) : null}
 
       <div className="mt-8 rounded-3xl bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
