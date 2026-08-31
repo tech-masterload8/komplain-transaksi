@@ -59,10 +59,12 @@ export function requestIsHttps(request: Request) {
   }
 }
 
+// SameSite=Lax cukup untuk navigasi top-level di WebView, dan tidak ikut
+// dibuang saat sertifikat host belum dipercaya seperti pada URL berbasis IP.
 function cookieOptions(secure: boolean) {
   return {
     httpOnly: true,
-    sameSite: (secure ? "none" : "lax") as "none" | "lax",
+    sameSite: "lax" as const,
     path: cookiePath(),
     maxAge: MAX_AGE,
     secure,
@@ -86,8 +88,7 @@ export function applyClearCookie(
 }
 
 export function sessionCookie(token: string, cookieName = CUSTOMER_COOKIE, secure = false) {
-  const sameSite = secure ? "None" : "Lax";
-  return `${cookieName}=${token}; Path=${cookiePath()}; HttpOnly; SameSite=${sameSite}; Max-Age=${MAX_AGE}${secure ? "; Secure" : ""}`;
+  return `${cookieName}=${token}; Path=${cookiePath()}; HttpOnly; SameSite=Lax; Max-Age=${MAX_AGE}${secure ? "; Secure" : ""}`;
 }
 
 export function clearSessionCookie(cookieName = CUSTOMER_COOKIE) {

@@ -45,9 +45,11 @@ const REASON_COPY: Record<AuthIngestReason, { title: string; body: string }> = {
 export default function AgentEntry({
   authReason,
   debugDump,
+  cookieSent = false,
 }: {
   authReason?: AuthIngestReason;
   debugDump?: string;
+  cookieSent?: boolean;
 }) {
   const router = useRouter();
   const { user, ready } = useAgent();
@@ -65,7 +67,9 @@ export default function AgentEntry({
 
   if (manual) return <LoginForm />;
 
-  const failed = ready && !user;
+  // Server sudah tahu apakah cookie sesi ikut terkirim, jadi jangan menahan
+  // layar di teks "menyiapkan" sambil menunggu /api/auth/me.
+  const failed = ready ? !user : !cookieSent;
   const copy = failed
     ? REASON_COPY[authReason || "no-header"]
     : REASON_COPY.ok;
@@ -92,8 +96,10 @@ export default function AgentEntry({
         </p>
         <h1 className="mt-3 text-[28px] font-extrabold tracking-tight">{copy.title}</h1>
         <p className="mt-3 text-sm leading-6 text-zinc-500">{copy.body}</p>
-        {failed && authReason ? (
-          <p className="mt-4 text-[11px] font-mono text-zinc-400">kode: {authReason}</p>
+        {failed ? (
+          <p className="mt-4 text-[11px] font-mono text-zinc-400">
+            kode: {authReason || "no-header"} · cookie sesi: {cookieSent ? "terkirim" : "tidak terkirim"}
+          </p>
         ) : null}
         {failed && debugDump ? (
           <div className="mt-6">

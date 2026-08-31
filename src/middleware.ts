@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose/jwt/verify";
 import { ADMIN_COOKIE, CUSTOMER_COOKIE } from "@/lib/session";
 
 function isPublic(pathname: string) {
@@ -16,15 +15,32 @@ function isPublic(pathname: string) {
   );
 }
 
-async function hasValidCookie(request: NextRequest, name: string) {
+function decodeJwtPayload(token: string) {
+  const part = token.split(".")[1];
+  if (!part) return null;
+  try {
+    const base64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    return JSON.parse(atob(padded)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Middleware berjalan di Edge runtime yang tidak selalu melihat SESSION_SECRET
+ * dari .env Docker. Verifikasi tanda tangan di sini pernah menolak semua sesi
+ * dan memantulkan halaman pelanggan ke beranda, jadi di sini hanya cek bentuk
+ * dan masa berlaku cookie. Tanda tangan tetap diperiksa oleh currentUser()
+ * dan requireUser() yang jalan di Node.
+ */
+function hasUsableSession(request: NextRequest, name: string) {
   const token = request.cookies.get(name)?.value;
   if (!token) return false;
-  try {
-    await jwtVerify(token, new TextEncoder().encode(process.env.SESSION_SECRET || ""));
-    return true;
-  } catch {
-    return false;
-  }
+  const payload = decodeJwtPayload(token);
+  if (!payload?.role || !payload.kode) return false;
+  const exp = typeof payload.exp === "number" ? payload.exp : 0;
+  return exp === 0 || exp * 1000 > Date.now();
 }
 
 export async function middleware(request: NextRequest) {
@@ -32,9 +48,9 @@ export async function middleware(request: NextRequest) {
   if (isPublic(pathname)) return NextResponse.next();
 
   const isAdminPath = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
-  const ok = await hasValidCookie(request, isAdminPath ? ADMIN_COOKIE : CUSTOMER_COOKIE);
-
-  if (ok) return NextResponse.next();
+  if (hasUsableSession(request, isAdminPath ? ADMIN_COOKIE : CUSTOMER_COOKIE)) {
+    return NextResponse.next();
+  }
 
   if (pathname.startsWith("/api")) {
     return NextResponse.json({ error: "Tidak memiliki akses" }, { status: 401 });

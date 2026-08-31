@@ -9,6 +9,12 @@ export async function currentUser() {
   return user;
 }
 
+/** Apakah browser mengirim cookie sesi, terlepas dari sah atau tidak. */
+export async function customerCookieSent() {
+  const jar = await cookies();
+  return Boolean(jar.get(CUSTOMER_COOKIE)?.value);
+}
+
 export async function currentAdmin() {
   const jar = await cookies();
   const user = await verifySession(jar.get(ADMIN_COOKIE)?.value);
