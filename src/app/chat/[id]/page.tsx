@@ -7,6 +7,7 @@ import PhoneShell from "@/components/PhoneShell";
 import { CircleIconButton } from "@/components/CircleIconButton";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { formatTime } from "@/lib/format";
+import { apiFetch } from "@/lib/client-session";
 import { apiUrl } from "@/lib/paths";
 
 type Message = {
@@ -35,11 +36,13 @@ export default function ChatThreadPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function load() {
-    const me = await fetch(apiUrl("/api/auth/me"), { credentials: "include" }).then((res) => res.json());
+    const me = await apiFetch(apiUrl("/api/auth/me"))
+      .then((res) => (res.ok ? res.json() : { user: null }))
+      .catch(() => ({ user: null }));
     if (me.user?.role) setRole(me.user.role);
-    const res = await fetch(apiUrl(`/api/conversations/${params.id}`), { credentials: "include" });
-    if (res.status === 401) return;
-    const data = await res.json();
+    const res = await apiFetch(apiUrl(`/api/conversations/${params.id}`));
+    if (!res.ok) return;
+    const data = await res.json().catch(() => ({ messages: [] }));
     setConversation(data.conversation);
     setMessages(data.messages || []);
   }
@@ -62,7 +65,7 @@ export default function ChatThreadPage() {
     form.set("body", text);
     if (file) form.set("file", file);
     setText("");
-    await fetch(apiUrl(`/api/conversations/${params.id}/messages`), { method: "POST", body: form });
+    await apiFetch(apiUrl(`/api/conversations/${params.id}/messages`), { method: "POST", body: form });
     await load();
   }
 

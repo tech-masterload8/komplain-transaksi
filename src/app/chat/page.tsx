@@ -7,6 +7,7 @@ import PhoneShell from "@/components/PhoneShell";
 import { CircleIconButton } from "@/components/CircleIconButton";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { formatTime, truncate } from "@/lib/format";
+import { apiFetch } from "@/lib/client-session";
 import { apiUrl } from "@/lib/paths";
 
 type Conversation = {
@@ -31,9 +32,9 @@ export default function ChatListPage() {
   async function load(nextStatus = status, query = q) {
     const params = new URLSearchParams({ status: nextStatus });
     if (query) params.set("q", query);
-    const res = await fetch(apiUrl(`/api/conversations?${params.toString()}`), { credentials: "include" });
-    if (res.status === 401) return;
-    const data = await res.json();
+    const res = await apiFetch(apiUrl(`/api/conversations?${params.toString()}`));
+    if (!res.ok) return;
+    const data = await res.json().catch(() => ({ items: [] }));
     setItems(data.items || []);
   }
 

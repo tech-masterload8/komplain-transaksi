@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { ingestAuthorization } from "@/lib/auth";
+import { currentUser } from "@/lib/current-user";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  // Token sesi lewat header dipakai WebView yang tidak menyimpan cookie.
+  const known = await currentUser();
+  if (known) {
+    return NextResponse.json({ user: { kode: known.kode, name: known.name, phone: known.phone } });
+  }
+
   const ingested = await ingestAuthorization({
     headers: {
       cookie: request.headers.get("cookie") || undefined,

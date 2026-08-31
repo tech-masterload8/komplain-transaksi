@@ -4,6 +4,7 @@ import "./globals.css";
 import { AgentProvider } from "@/components/customer/AgentContext";
 import { currentUser } from "@/lib/current-user";
 import { toAgentProfile } from "@/lib/agent-profile";
+import { signSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,12 +26,15 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const agent = toAgentProfile(await currentUser());
+  const user = await currentUser();
+  const token = user ? await signSession(user) : null;
 
   return (
     <html lang="id">
       <body className={`${sans.variable} antialiased`}>
-        <AgentProvider user={agent}>{children}</AgentProvider>
+        <AgentProvider user={toAgentProfile(user)} token={token}>
+          {children}
+        </AgentProvider>
       </body>
     </html>
   );

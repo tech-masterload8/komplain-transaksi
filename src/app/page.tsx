@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import AgentEntry from "@/components/AgentEntry";
 import TransaksiList from "@/components/customer/TransaksiList";
 import { currentUser, customerCookieSent } from "@/lib/current-user";
+import { toAgentProfile } from "@/lib/agent-profile";
 import type { AuthIngestReason } from "@/lib/auth-reason";
 import { decodeAuthDebugHeader, formatAuthDebugDump } from "@/lib/auth-debug";
 import { loadTransaksiView } from "@/lib/transaksi-data";
@@ -15,13 +16,7 @@ export default async function HomePage() {
   // request yang sama, jangan redirect ke /transaksi yang bisa di-cache proxy.
   if (user) {
     const { items, error } = await loadTransaksiView(user);
-    return (
-      <TransaksiList
-        initialItems={items}
-        initialError={error}
-        user={{ kode: user.kode, name: user.name || user.kode, phone: user.phone }}
-      />
-    );
+    return <TransaksiList initialItems={items} initialError={error} user={toAgentProfile(user)} />;
   }
 
   const incoming = await headers();

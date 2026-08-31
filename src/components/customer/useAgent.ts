@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAgentContext } from "./AgentContext";
+import { apiFetch } from "@/lib/client-session";
 import { apiUrl } from "@/lib/paths";
 import type { AgentProfile } from "@/lib/agent-profile";
 
@@ -20,7 +21,7 @@ export function useAgent(initial?: AgentProfile | null) {
       return;
     }
     let cancelled = false;
-    fetch(apiUrl("/api/auth/me"), { credentials: "include" })
+    apiFetch(apiUrl("/api/auth/me"))
       .then((res) => (res.ok ? res.json() : { user: null }))
       .then((data) => {
         if (cancelled) return;

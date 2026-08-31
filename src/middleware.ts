@@ -1,19 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_COOKIE, CUSTOMER_COOKIE } from "@/lib/session";
-
-function isPublic(pathname: string) {
-  return (
-    pathname === "/" ||
-    pathname === "/api/health" ||
-    pathname === "/api/auth/me" ||
-    pathname === "/api/auth/login" ||
-    pathname === "/admin/login" ||
-    pathname === "/api/admin/auth/login" ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/uploads") ||
-    pathname === "/favicon.ico"
-  );
-}
+import { ADMIN_COOKIE } from "@/lib/session";
 
 function decodeJwtPayload(token: string) {
   const part = token.split(".")[1];
@@ -29,13 +15,11 @@ function decodeJwtPayload(token: string) {
 
 /**
  * Middleware berjalan di Edge runtime yang tidak selalu melihat SESSION_SECRET
- * dari .env Docker. Verifikasi tanda tangan di sini pernah menolak semua sesi
- * dan memantulkan halaman pelanggan ke beranda, jadi di sini hanya cek bentuk
- * dan masa berlaku cookie. Tanda tangan tetap diperiksa oleh currentUser()
- * dan requireUser() yang jalan di Node.
+ * dari .env Docker, jadi di sini hanya cek bentuk dan masa berlaku cookie.
+ * Tanda tangan diperiksa currentAdmin() yang jalan di Node.
  */
-function hasUsableSession(request: NextRequest, name: string) {
-  const token = request.cookies.get(name)?.value;
+function hasAdminSession(request: NextRequest) {
+  const token = request.cookies.get(ADMIN_COOKIE)?.value;
   if (!token) return false;
   const payload = decodeJwtPayload(token);
   if (!payload?.role || !payload.kode) return false;
@@ -43,23 +27,28 @@ function hasUsableSession(request: NextRequest, name: string) {
   return exp === 0 || exp * 1000 > Date.now();
 }
 
-export async function middleware(request: NextRequest) {
+/**
+ * Halaman pelanggan tidak dijaga di sini. WebView APK tidak menyimpan cookie,
+ * sehingga penjagaan berbasis cookie memantulkan semua navigasi ke beranda.
+ * Otorisasi sebenarnya ada di requireUser() pada setiap route API, yang juga
+ * menerima token sesi lewat header.
+ */
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (isPublic(pathname)) return NextResponse.next();
+  const isAdminPage = pathname.startsWith("/admin") && pathname !== "/admin/login";
+  const isAdminApi = pathname.startsWith("/api/admin") && pathname !== "/api/admin/auth/login";
+  if (!isAdminPage && !isAdminApi) return NextResponse.next();
 
-  const isAdminPath = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
-  if (hasUsableSession(request, isAdminPath ? ADMIN_COOKIE : CUSTOMER_COOKIE)) {
-    return NextResponse.next();
-  }
+  if (hasAdminSession(request)) return NextResponse.next();
 
-  if (pathname.startsWith("/api")) {
+  if (isAdminApi) {
     return NextResponse.json({ error: "Tidak memiliki akses" }, { status: 401 });
   }
   const login = request.nextUrl.clone();
-  login.pathname = isAdminPath ? "/admin/login" : "/";
+  login.pathname = "/admin/login";
   return NextResponse.redirect(login);
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/admin/:path*", "/api/admin/:path*"],
 };

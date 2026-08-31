@@ -7,6 +7,7 @@ import PhoneShell from "@/components/PhoneShell";
 import { CircleIconButton } from "@/components/CircleIconButton";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { formatDateTime, formatNominal } from "@/lib/format";
+import { apiFetch } from "@/lib/client-session";
 import { apiUrl } from "@/lib/paths";
 
 type Trx = {
@@ -32,7 +33,7 @@ export default function TransaksiDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(apiUrl(`/api/transaksi/${params.id}`), { credentials: "include" })
+    apiFetch(apiUrl(`/api/transaksi/${params.id}`))
       .then(async (res) => {
         const data = await res.json().catch(() => ({}) as { item?: Trx; error?: string });
         if (!res.ok) {
@@ -46,7 +47,7 @@ export default function TransaksiDetailPage() {
         setItem(data.item);
       })
       .catch(() => setError("Tidak bisa memuat detail transaksi."));
-    fetch(apiUrl("/api/shortcuts"), { credentials: "include" })
+    apiFetch(apiUrl("/api/shortcuts"))
       .then((res) => (res.ok ? res.json() : { items: [] }))
       .then((data) => setShortcuts(data.items || []))
       .catch(() => setShortcuts([]));
@@ -56,9 +57,8 @@ export default function TransaksiDetailPage() {
     if (!message.trim() || sending) return;
     setSending(true);
     try {
-      const res = await fetch(apiUrl("/api/conversations"), {
+      const res = await apiFetch(apiUrl("/api/conversations"), {
         method: "POST",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transactionId: params.id, message }),
       });

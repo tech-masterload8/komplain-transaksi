@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, MessageCircle, Search } from "lucide-react";
 import PhoneShell from "@/components/PhoneShell";
 import { CircleIconButton } from "@/components/CircleIconButton";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
-import type { AgentProfile } from "@/components/customer/useAgent";
+import { useAgent } from "@/components/customer/useAgent";
+import type { AgentProfile } from "@/lib/agent-profile";
+import { apiFetch } from "@/lib/client-session";
 import { formatDateTime, truncate, isSuccessStatus } from "@/lib/format";
 import { apiUrl } from "@/lib/paths";
 
@@ -22,18 +24,20 @@ export type TrxItem = {
 export default function TransaksiList({
   initialItems,
   initialError,
-  user,
+  user: userProp,
 }: {
   initialItems: TrxItem[];
   initialError?: string | null;
-  user: AgentProfile;
+  user?: AgentProfile | null;
 }) {
   const router = useRouter();
+  const { user } = useAgent(userProp);
   const [items, setItems] = useState<TrxItem[]>(initialItems);
   const [q, setQ] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(initialItems.length === 0 && !initialError);
   const [error, setError] = useState<string | null>(initialError || null);
+  const fetchedOnMount = useRef(false);
 
   async function load(reset = true) {
     setLoading(true);
@@ -42,14 +46,14 @@ export default function TransaksiList({
       const params = new URLSearchParams();
       if (q) params.set("q", q);
       params.set("offset", reset ? "0" : String(items.length));
-      const res = await fetch(apiUrl(`/api/transaksi?${params.toString()}`), { credentials: "include" });
-      if (res.status === 401) {
-        setError("Sesi tidak terbaca. Tutup menu Website, lalu buka lagi dari APK.");
-        return;
-      }
-      const data = (await res.json()) as { items?: TrxItem[]; error?: string };
+      const res = await apiFetch(apiUrl(`/api/transaksi?${params.toString()}`));
+      const data = (await res.json().catch(() => ({}))) as { items?: TrxItem[]; error?: string };
       if (!res.ok) {
-        setError(data.error || "Gagal memuat transaksi");
+        setError(
+          res.status === 401
+            ? "Sesi tidak terbaca. Tutup menu Website, lalu buka lagi dari APK."
+            : data.error || "Gagal memuat transaksi",
+        );
         if (reset) setItems([]);
         return;
       }
@@ -61,12 +65,21 @@ export default function TransaksiList({
     }
   }
 
+  // Server tidak selalu punya sesi (WebView tanpa cookie), jadi ambil dari
+  // klien memakai token sesi yang tersimpan.
+  useEffect(() => {
+    if (fetchedOnMount.current) return;
+    fetchedOnMount.current = true;
+    if (initialItems.length === 0 && !initialError) load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <PhoneShell>
       <div className="flex min-h-dvh flex-col px-5 pb-8 pt-6">
         <CustomerHeader
           title="Transaksi"
-          user={user}
+          user={userProp}
           extra={
             <>
               <CircleIconButton onClick={() => setSearchOpen((v) => !v)}>
@@ -132,7 +145,7 @@ export default function TransaksiList({
           ))}
           {!loading && items.length === 0 && !error ? (
             <p className="py-16 text-center text-sm text-zinc-400">
-              Belum ada transaksi untuk {user.kode}.
+              Belum ada transaksi untuk {user?.kode || "akun ini"}.
             </p>
           ) : null}
         </div>
